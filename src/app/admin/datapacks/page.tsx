@@ -42,7 +42,7 @@ export default function AdminDataPacksPage() {
     }
 
     const renderContent = () => {
-        if (authLoading || packsLoading) {
+        if (authLoading || (isAdmin && packsLoading)) {
             return (
                 <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin" />

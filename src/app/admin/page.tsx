@@ -3,6 +3,7 @@
 import { Header } from "@/components/header";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { Loader2 } from "lucide-react";
 
 export default function AdminPage() {
     const { user, loading, isAdmin } = useAuth();
@@ -18,7 +19,7 @@ export default function AdminPage() {
 
                 {loading ? (
                     <div className="flex justify-center items-center h-64">
-                        <p>Loading...</p>
+                         <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
                 ) : user && isAdmin ? (
                     <AdminDashboard />
