@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Header } from "@/components/header";
-import { DataPackCatalog } from "@/components/data-pack-catalog";
+import { CharacterCreator } from "@/components/character-creator";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -16,15 +16,7 @@ export default function Home() {
             <p>Loading...</p>
           </div>
         ) : user ? (
-          <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold">Welcome, {user.displayName}!</h2>
-              <p className="text-muted-foreground mt-2">
-                Manage your installed DataPacks below.
-              </p>
-            </div>
-            <DataPackCatalog />
-          </div>
+          <CharacterCreator />
         ) : (
           <div className="text-center py-16">
             <h2 className="text-2xl font-bold">Welcome to CharaForge AI</h2>
