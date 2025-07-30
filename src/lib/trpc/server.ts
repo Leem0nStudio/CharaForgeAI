@@ -1,16 +1,17 @@
+
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { auth, db } from '@/lib/firebase/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
-import { cookies } from 'next/headers';
+import { cookies, ReadonlyRequestCookies } from 'next/headers';
 
 // 1. CONTEXT CREATION
 // This function is responsible for creating the context for each request.
-// It's the ideal place to handle authentication.
-export const createContext = async () => {
-  const sessionCookie = cookies().get('__session')?.value || '';
+// It now receives the cookies object directly from the request handler.
+export const createContext = async (cookieStore: ReadonlyRequestCookies) => {
+  const sessionCookie = cookieStore.get('__session')?.value || '';
 
   if (!sessionCookie) {
     return { user: null };

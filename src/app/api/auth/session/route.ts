@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
           sameSite: 'lax' as 'lax' | 'strict' | 'none',
         };
 
-        const cookiesStore = cookies();
-        cookiesStore.set(options);
+        // Use the 'cookies' API from Next.js to set the cookie
+        cookies().set(options);
         console.log("[/api/auth/session POST] Session cookie set in headers");
 
         // Create user in Firestore if they don't exist
@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   console.log("[/api/auth/session DELETE] Received request");
-  const cookiesStore = cookies();
-  const session = cookiesStore.get("__session")?.value || "";
+  const session = cookies().get("__session")?.value || "";
   console.log("[/api/auth/session DELETE] Session cookie found:", !!session);
 
   if (!session) {
@@ -80,7 +79,7 @@ export async function DELETE(request: NextRequest) {
      console.log("[/api/auth/session DELETE] Session cookie verified for user:", decodedClaims.sub);
     await auth.revokeRefreshTokens(decodedClaims.sub);
      console.log("[/api/auth/session DELETE] Refresh tokens revoked");
-    cookiesStore.delete("__session");
+    cookies().delete("__session");
      console.log("[/api/auth/session DELETE] Session cookie deleted");
     return NextResponse.json({}, { status: 200 });
   } catch (error) {
