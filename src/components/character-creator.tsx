@@ -121,10 +121,7 @@ export function CharacterCreator() {
   }, [selectedPack, toast]);
 
 
-  async function handleGeneration(
-    basePreferences: string,
-    promptBuilderResult?: { prompt: string; negativePrompt: string }
-  ) {
+  async function handleGeneration(basePreferences: string) {
     if (!user || !selectedPack) {
       toast({ variant: "destructive", title: "Authentication Error" });
       return;
@@ -210,7 +207,12 @@ export function CharacterCreator() {
             ))}
           </div>
         ) : (
-            <p className="text-muted-foreground p-4 text-center">No data packs installed. Go to the main page to find and install new DataPacks.</p>
+            <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                <h3 className="text-xl font-semibold">No DataPacks Installed</h3>
+                <p className="text-muted-foreground mt-2">
+                    Go to the main page to find and install new DataPacks.
+                </p>
+            </div>
         )}
       </CardContent>
     </Card>
