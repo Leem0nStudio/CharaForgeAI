@@ -1,4 +1,4 @@
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { auth, db } from '@/lib/firebase/server';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -6,45 +6,62 @@ import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
 import { cookies } from 'next/headers';
 
-const t = initTRPC.context<{
-    user?: DecodedIdToken;
-}>().create();
-
-const middleware = t.middleware;
-
-const isAuthenticated = middleware(async (opts) => {
+// 1. CONTEXT CREATION
+// This function is responsible for creating the context for each request.
+// It's the ideal place to handle authentication.
+export const createContext = async () => {
   const sessionCookie = cookies().get('__session')?.value || '';
 
   if (!sessionCookie) {
-    throw new Error('Unauthorized: No session cookie found.');
+    return { user: null };
   }
 
   try {
     const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
-    return opts.next({
-      ctx: {
-        ...opts.ctx,
-        user: decodedClaims,
-      },
-    });
+    return { user: decodedClaims };
   } catch (error) {
-    console.error("Authentication error:", error);
-    throw new Error('Unauthorized: Invalid session cookie.');
+    // Session cookie is invalid or expired.
+    return { user: null };
   }
+};
+
+type Context = Awaited<ReturnType<typeof createContext>>;
+
+const t = initTRPC.context<Context>().create();
+
+const middleware = t.middleware;
+
+// 2. MIDDLEWARE
+// The middleware now just checks if the user object exists in the context.
+// It no longer needs to read cookies itself.
+const isAuthenticated = middleware(({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+    },
+  });
 });
 
-const isAdmin = middleware(async (opts) => {
-    const { ctx } = opts;
+const isAdmin = middleware(({ ctx, next }) => {
     if (!ctx.user || !ctx.user.admin) {
-        throw new Error('Forbidden: User is not an admin.');
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'User is not an admin.' });
     }
-    return opts.next(opts);
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
 });
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const privateProcedure = t.procedure.use(isAuthenticated);
-export const adminProcedure = privateProcedure.use(isAdmin);
+export const adminProcedure = t.procedure.use(isAuthenticated).use(isAdmin);
 
 const UserSchema = z.object({
   uid: z.string(),
