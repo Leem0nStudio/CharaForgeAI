@@ -11,6 +11,7 @@ const serviceAccount = {
 const app = !getApps().length
   ? initializeApp({
       credential: cert(serviceAccount),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     })
   : getApp();
 
