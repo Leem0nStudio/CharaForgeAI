@@ -1,7 +1,8 @@
 "use client";
 
-import { Moon, Sun, LogIn, LogOut } from "lucide-react";
+import { Moon, Sun, LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,13 @@ export function Header() {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuItem disabled>
                 <p className="font-medium">{user.displayName}</p>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+               <DropdownMenuItem asChild>
+                <Link href="/vault">
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  <span>Character Vault</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={signOut}>

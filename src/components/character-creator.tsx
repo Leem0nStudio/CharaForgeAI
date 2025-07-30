@@ -9,6 +9,7 @@ import { Sparkles, Wand2 } from "lucide-react";
 
 import { generateCharacterNameAndBio } from "@/ai/flows/generate-character-name-and-bio";
 import { generateCharacterImage } from "@/ai/flows/generate-character-image";
+import { trpc } from "@/lib/trpc/client";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +50,24 @@ export function CharacterCreator() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const utils = trpc.useUtils();
+
+  const createCharacterMutation = trpc.character.createCharacter.useMutation({
+    onSuccess: () => {
+      utils.character.listUserCharacters.invalidate();
+      toast({
+        title: "Character Saved!",
+        description: "Your new character has been saved to your vault.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to save character",
+        description: error.message,
+      });
+    },
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,7 +92,6 @@ export function CharacterCreator() {
     try {
       const imagePrompt = `A fantasy portrait of a character described as: ${values.preferences}. High quality, digital painting, intricate details.`;
       
-      // TODO: Replace with dynamic datapackId from UI selection
       const datapackId = "core_base_styles";
 
       const [nameAndBioResult, imageResult] = await Promise.all([
@@ -96,11 +114,20 @@ export function CharacterCreator() {
         throw new Error("Failed to generate character image.");
       }
 
-      setCharacter({
+      const newCharacter = {
         name: nameAndBioResult.name,
         bio: nameAndBioResult.bio,
         imageUrl: imageResult.imageUrl,
+      };
+
+      setCharacter(newCharacter);
+
+      // Save the character to the vault
+      createCharacterMutation.mutate({
+        ...newCharacter,
+        associatedDataPacks: [datapackId],
       });
+
     } catch (error: any) {
       console.error(error);
       toast({
@@ -115,7 +142,7 @@ export function CharacterCreator() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-6xl mx-auto">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Describe Your Character</CardTitle>
@@ -145,7 +172,7 @@ export function CharacterCreator() {
               />
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading} className="w-full">
+              <Button type="submit" disabled={isLoading || createCharacterMutation.isPending} className="w-full">
                 {isLoading ? (
                   "Generating..."
                 ) : (

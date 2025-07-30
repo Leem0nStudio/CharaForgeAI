@@ -3,6 +3,8 @@
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Header } from "@/components/header";
 import { CharacterCreator } from "@/components/character-creator";
+import { CharacterVault } from "@/components/character-vault";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -16,7 +18,20 @@ export default function Home() {
             <p>Loading...</p>
           </div>
         ) : user ? (
-          <CharacterCreator />
+          <Tabs defaultValue="creator" className="w-full">
+            <div className="flex justify-center mb-8">
+              <TabsList>
+                <TabsTrigger value="creator">Character Creator</TabsTrigger>
+                <TabsTrigger value="vault">Character Vault</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="creator">
+              <CharacterCreator />
+            </TabsContent>
+            <TabsContent value="vault">
+              <CharacterVault />
+            </TabsContent>
+          </Tabs>
         ) : (
           <div className="text-center py-16">
             <h2 className="text-2xl font-bold">Welcome to CharaForge AI</h2>
