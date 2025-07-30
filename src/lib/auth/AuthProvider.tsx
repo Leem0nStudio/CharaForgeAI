@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
@@ -10,7 +11,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client"; // db is not used, can be removed
 import { useRouter } from "next/navigation";
-import { trpcClient } from "@/lib/trpc/client";
+import { trpc } from "@/lib/trpc/client";
 import { FieldValue } from "firebase/firestore"; // Not used here, can be removed
 
 type AuthContextType = {
@@ -59,6 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (userState) => {
@@ -73,13 +75,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsAdmin(false);
       }
       // Invalidate tRPC cache on auth state change
-      await trpcClient.invalidate();
+      await utils.invalidate();
       router.refresh();
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, utils]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
