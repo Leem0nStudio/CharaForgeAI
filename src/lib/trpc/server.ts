@@ -550,7 +550,7 @@ const adminRouter = router({
 
         const [listUsersResult, charactersSnapshot] = await Promise.all([
             usersPromise,
-            charactersSnapshot,
+            charactersPromise,
         ]);
 
         const totalUsers = listUsersResult.users.length;
