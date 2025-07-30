@@ -1,19 +1,16 @@
-
-
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { auth, db } from '@/lib/firebase/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
-import { cookies, ReadonlyRequestCookies } from 'next/headers';
+import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 // 1. CONTEXT CREATION
 // This function is responsible for creating the context for each request.
 // It now receives the cookies object directly from the request handler.
 export const createContext = async (cookieStore: ReadonlyRequestCookies) => {
-  // Intenta leer la cookie dentro de un Promise.resolve() para asegurar el contexto asíncrono
-  const sessionCookie = (await cookieStore.get('__session'))?.value || '';
+  const sessionCookie = cookieStore.get('__session')?.value;
 
   if (!sessionCookie) {
     return { user: null };
@@ -574,6 +571,3 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-
-    
-    

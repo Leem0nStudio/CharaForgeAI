@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -8,7 +8,7 @@ import {
   User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
-import { SessionManager } from "@/lib/auth/SessionManager";
+import { useRouter } from "next/navigation";
 
 type AuthContextType = {
   user: User | null;
@@ -26,9 +26,9 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-async function manageSessionCookie(user: User | null) {
-  if (user) {
-    const idToken = await user.getIdToken();
+async function manageSessionCookie(idToken: string | null) {
+  if (idToken) {
+    // Create the session
     await fetch("/api/auth/session", {
       method: "POST",
       headers: {
@@ -37,6 +37,7 @@ async function manageSessionCookie(user: User | null) {
       },
     });
   } else {
+    // Sign out
     await fetch("/api/auth/session", {
       method: "DELETE",
     });
@@ -47,24 +48,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  const handleAuthChange = useCallback(async (userState: User | null) => {
+    setLoading(true);
+    setUser(userState);
+    if (userState) {
+      const idTokenResult = await userState.getIdTokenResult();
+      setIsAdmin(!!idTokenResult.claims.admin);
+      await manageSessionCookie(idTokenResult.token);
+    } else {
+      setIsAdmin(false);
+      await manageSessionCookie(null);
+    }
+    // Refresh the router to ensure server components re-render with the new auth state
+    router.refresh(); 
+    setLoading(false);
+  }, [router]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (userState) => {
-      setLoading(true);
-      setUser(userState);
-      
-      if (userState) {
-        const idTokenResult = await userState.getIdTokenResult();
-        setIsAdmin(!!idTokenResult.claims.admin);
-      } else {
-        setIsAdmin(false);
-      }
-
-      await manageSessionCookie(userState);
-      setLoading(false);
-    });
+    const unsubscribe = onAuthStateChanged(auth, handleAuthChange);
     return () => unsubscribe();
-  }, []);
+  }, [handleAuthChange]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -88,7 +93,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, isAdmin, signInWithGoogle, signOut, loading }}>
-      <SessionManager />
       {children}
     </AuthContext.Provider>
   );

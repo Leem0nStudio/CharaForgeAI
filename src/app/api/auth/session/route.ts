@@ -6,16 +6,15 @@ import { FieldValue } from 'firebase-admin/firestore';
 export async function POST(request: NextRequest) {
   console.log("[/api/auth/session POST] Received request");
   const authorization = request.headers.get("Authorization");
-  console.log("[/api/auth/session POST] Authorization header:", authorization);
+  
   if (authorization?.startsWith("Bearer ")) {
     const idToken = authorization.split("Bearer ")[1];
-    console.log("[/api/auth/session POST] ID Token received");
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
       console.log("[/api/auth/session POST] ID Token verified for user:", decodedToken.uid);
 
       if (decodedToken) {
-        const expiresIn = 60 * 60 * 24 * 7 * 1000;
+        const expiresIn = 60 * 60 * 24 * 7 * 1000; // 7 days
         const sessionCookie = await auth.createSessionCookie(idToken, {
           expiresIn,
         });
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
 
         // Use the 'cookies' API from Next.js to set the cookie
         cookies().set(options);
-        console.log("[/api/auth/session POST] Session cookie set in headers");
+        console.log("[/api/auth/session POST] Session cookie set in response");
 
         // Create user in Firestore if they don't exist
         const userRef = db.collection("users").doc(decodedToken.uid);
@@ -56,32 +55,40 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (error) {
-       console.error("[/api/auth/session POST] Error during ID token verification or session cookie creation:", error);
+       console.error("[/api/auth/session POST] Error during session management:", error);
+       // Return an error response if something goes wrong
+       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
   }
 
-  return NextResponse.json({}, { status: 200 });
+  return NextResponse.json({ status: "success" }, { status: 200 });
 }
 
 export async function DELETE(request: NextRequest) {
   console.log("[/api/auth/session DELETE] Received request");
-  const session = cookies().get("__session")?.value || "";
-  console.log("[/api/auth/session DELETE] Session cookie found:", !!session);
+  const cookieStore = cookies();
+  const sessionCookie = cookieStore.get("__session");
 
-  if (!session) {
-    return NextResponse.json({ status: "No session found" }, { status: 400 });
+  if (!sessionCookie) {
+    console.log("[/api/auth/session DELETE] No session cookie found to delete.");
+    return NextResponse.json({ status: "No session found" }, { status: 200 });
   }
 
   try {
-    const decodedClaims = await auth.verifySessionCookie(session, true);
-     console.log("[/api/auth/session DELETE] Session cookie verified for user:", decodedClaims.sub);
+    // Revoke the session cookie from Firebase Auth
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie.value, true);
     await auth.revokeRefreshTokens(decodedClaims.sub);
-     console.log("[/api/auth/session DELETE] Refresh tokens revoked");
-    cookies().delete("__session");
-     console.log("[/api/auth/session DELETE] Session cookie deleted");
-    return NextResponse.json({}, { status: 200 });
+    console.log("[/api/auth/session DELETE] Refresh tokens revoked for user:", decodedClaims.sub);
+    
+    // Delete the cookie from the browser
+    cookieStore.delete("__session");
+    console.log("[/api/auth/session DELETE] Session cookie deleted from browser");
+    
+    return NextResponse.json({ status: "success" }, { status: 200 });
   } catch (error) {
-    console.error("[/api/auth/session DELETE] Error during session cookie verification or revocation:", error);
+    console.error("[/api/auth/session DELETE] Error during session deletion:", error);
+    // Even if verification fails (e.g., expired cookie), still try to delete it from the browser
+    cookieStore.delete("__session");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
