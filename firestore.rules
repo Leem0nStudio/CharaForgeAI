@@ -1,9 +1,34 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all documents for any authenticated user
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Users: Can only read/write their own data.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Characters:
+    // - Anyone can read public characters.
+    // - Only the owner can read their private characters.
+    // - Only the owner can create, update, or delete their characters.
+    match /characters/{characterId} {
+      allow read: if resource.data.publicStatus == true || (request.auth != null && request.auth.uid == resource.data.userId);
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Collections:
+    // - Only the owner can manage their collections.
+    match /collections/{collectionId} {
+      allow read, create, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // DataPacks:
+    // - Read-only for all clients, as they are managed by the admin/server.
+    match /datapacks/{datapackId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

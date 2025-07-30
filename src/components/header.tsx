@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, LogIn, LogOut, ShieldCheck, Search, Sprout, UserCog } from "lucide-react";
+import { Moon, Sun, LogIn, LogOut, ShieldCheck, Search, Sprout, UserCog, Library } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -59,16 +59,16 @@ export function Header() {
                   <span>Character Vault</span>
                 </Link>
               </DropdownMenuItem>
+               <DropdownMenuItem asChild>
+                <Link href="/collections">
+                  <Library className="mr-2 h-4 w-4" />
+                  <span>Collections</span>
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/explore">
                   <Search className="mr-2 h-4 w-4" />
                   <span>Explore</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/collections">
-                  <Search className="mr-2 h-4 w-4" />
-                  <span>Collections</span>
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (
