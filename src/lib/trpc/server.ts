@@ -5,11 +5,12 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
 import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
-import { headers } from 'next/headers';
+import { headers as nextHeaders } from 'next/headers';
 
 // 1. CONTEXT CREATION
-export const createContext = async () => {
-  const authorization = headers().get('Authorization');
+export const createContext = async (opts: { headers: Headers }) => {
+  const { headers } = opts;
+  const authorization = headers.get('Authorization');
   if (!authorization || !authorization.startsWith('Bearer ')) {
     return { user: null };
   }
