@@ -4,18 +4,16 @@ import { auth, db } from '@/lib/firebase/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
-import { Headers } from 'next/dist/compiled/edge-runtime';
+import { cookies } from 'next/headers';
 
 const t = initTRPC.context<{
     user?: DecodedIdToken;
-    headers?: Headers;
 }>().create();
 
 const middleware = t.middleware;
 
 const isAuthenticated = middleware(async (opts) => {
-  const { ctx } = opts;
-  const sessionCookie = ctx.headers?.get('cookie')?.split('__session=')[1] || '';
+  const sessionCookie = cookies().get('__session')?.value || '';
 
   if (!sessionCookie) {
     throw new Error('Unauthorized: No session cookie found.');
@@ -25,7 +23,7 @@ const isAuthenticated = middleware(async (opts) => {
     const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
     return opts.next({
       ctx: {
-        ...ctx,
+        ...opts.ctx,
         user: decodedClaims,
       },
     });
@@ -63,41 +61,34 @@ const UserUpdateSchema = UserSchema.partial();
 
 const userRouter = router({
   getUser: privateProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("User not authenticated");
-    const userRef = db.collection('users').doc(ctx.user.uid);
+    const userRef = db.collection('users').doc(ctx.user!.uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
-      // This case should ideally not happen if session creation is robust
       throw new Error('User not found in Firestore');
     }
     
     const data = userDoc.data();
-    // Ensure totalLikes has a default value for older documents
     if (data && typeof data.totalLikes === 'undefined') {
         data.totalLikes = 0;
     }
     return UserSchema.parse(data);
   }),
-  updateUser: privateProcedure
+   updateUser: privateProcedure
     .input(UserUpdateSchema)
     .mutation(async ({ ctx, input }) => {
-       if (!ctx.user) throw new Error("User not authenticated");
-      const userRef = db.collection('users').doc(ctx.user.uid);
+      const userRef = db.collection('users').doc(ctx.user!.uid);
       await userRef.set({ ...input, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       return { success: true };
     }),
   deleteUser: privateProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("User not authenticated");
-    await db.collection('users').doc(ctx.user.uid).delete();
-    await auth.deleteUser(ctx.user.uid);
-    // Note: Deleting characters and other user data might be needed here
+    await db.collection('users').doc(ctx.user!.uid).delete();
+    await auth.deleteUser(ctx.user!.uid);
     return { success: true };
   }),
   installDataPack: privateProcedure
     .input(z.object({ packId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("User not authenticated");
-      const userRef = db.collection('users').doc(ctx.user.uid);
+      const userRef = db.collection('users').doc(ctx.user!.uid);
       await userRef.update({
         installedPacks: FieldValue.arrayUnion(input.packId),
       });
@@ -109,8 +100,7 @@ const userRouter = router({
        if (input.packId === 'core_base_styles') {
         throw new Error('Cannot uninstall core system pack.');
        }
-      if (!ctx.user) throw new Error("User not authenticated");
-      const userRef = db.collection('users').doc(ctx.user.uid);
+      const userRef = db.collection('users').doc(ctx.user!.uid);
       await userRef.update({
         installedPacks: FieldValue.arrayRemove(input.packId),
       });
@@ -133,7 +123,6 @@ const userRouter = router({
 
         const creators = usersSnapshot.docs.map(doc => {
             const data = doc.data();
-            // Basic validation for shape
             return {
                 uid: data.uid,
                 displayName: data.displayName || 'Anonymous',
@@ -231,10 +220,9 @@ const characterRouter = router({
   createCharacter: privateProcedure
     .input(CreateCharacterInputSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("User not authenticated");
       const characterData = {
         ...input,
-        userId: ctx.user.uid,
+        userId: ctx.user!.uid,
         likes: 0,
         likedBy: [],
         publicStatus: input.publicStatus ?? false,
@@ -257,8 +245,7 @@ const characterRouter = router({
   
   listUserCharacters: privateProcedure
     .query(async ({ ctx }) => {
-      if (!ctx.user) throw new Error("User not authenticated");
-      const snapshot = await db.collection('characters').where('userId', '==', ctx.user.uid).orderBy('createdAt', 'desc').get();
+      const snapshot = await db.collection('characters').where('userId', '==', ctx.user!.uid).orderBy('createdAt', 'desc').get();
       return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
     }),
 
@@ -282,7 +269,6 @@ const characterRouter = router({
   updateCharacter: privateProcedure
     .input(UpdateCharacterInputSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("User not authenticated");
       const { id, ...dataToUpdate } = input;
       const characterRef = db.collection('characters').doc(id);
       const characterDoc = await characterRef.get();
@@ -290,7 +276,7 @@ const characterRouter = router({
       if (!characterDoc.exists) {
         throw new Error('Character not found.');
       }
-      if (characterDoc.data()?.userId !== ctx.user.uid) {
+      if (characterDoc.data()?.userId !== ctx.user!.uid) {
         throw new Error('User not authorized to update this character.');
       }
 
@@ -304,14 +290,13 @@ const characterRouter = router({
   deleteCharacter: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("User not authenticated");
       const characterRef = db.collection('characters').doc(input.id);
       const characterDoc = await characterRef.get();
 
       if (!characterDoc.exists) {
         throw new Error('Character not found.');
       }
-      if (characterDoc.data()?.userId !== ctx.user.uid) {
+      if (characterDoc.data()?.userId !== ctx.user!.uid) {
         throw new Error('User not authorized to delete this character.');
       }
 
@@ -322,7 +307,6 @@ const characterRouter = router({
   likeCharacter: privateProcedure
     .input(z.object({ characterId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("User not authenticated");
       const characterRef = db.collection('characters').doc(input.characterId);
       
       await db.runTransaction(async (transaction) => {
@@ -332,13 +316,13 @@ const characterRouter = router({
         }
 
         const charData = charDoc.data();
-        if (charData?.likedBy?.includes(ctx.user.uid)) {
+        if (charData?.likedBy?.includes(ctx.user!.uid)) {
           return; // User has already liked this
         }
         
         transaction.update(characterRef, {
           likes: FieldValue.increment(1),
-          likedBy: FieldValue.arrayUnion(ctx.user.uid),
+          likedBy: FieldValue.arrayUnion(ctx.user!.uid),
         });
 
         if (charData.userId) {
@@ -355,8 +339,7 @@ const characterRouter = router({
   unlikeCharacter: privateProcedure
     .input(z.object({ characterId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("User not authenticated");
-      const characterRef = db.collection('characters').doc(input.characterId);
+       const characterRef = db.collection('characters').doc(input.characterId);
 
        await db.runTransaction(async (transaction) => {
         const charDoc = await transaction.get(characterRef);
@@ -365,13 +348,13 @@ const characterRouter = router({
         }
         
         const charData = charDoc.data();
-        if (!charData?.likedBy?.includes(ctx.user.uid)) {
+        if (!charData?.likedBy?.includes(ctx.user!.uid)) {
           return; // User hasn't liked this, nothing to do
         }
         
         transaction.update(characterRef, {
           likes: FieldValue.increment(-1),
-          likedBy: FieldValue.arrayRemove(ctx.user.uid),
+          likedBy: FieldValue.arrayRemove(ctx.user!.uid),
         });
 
         if (charData.userId) {
@@ -411,10 +394,9 @@ const collectionRouter = router({
     create: privateProcedure
         .input(CreateCollectionInputSchema)
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user) throw new Error("User not authenticated");
             const collectionData = {
                 ...input,
-                userId: ctx.user.uid,
+                userId: ctx.user!.uid,
                 characterIds: [],
                 createdAt: FieldValue.serverTimestamp(),
             };
@@ -422,10 +404,9 @@ const collectionRouter = router({
             return { id: collectionRef.id, ...collectionData };
         }),
     list: privateProcedure.query(async ({ ctx }) => {
-        if (!ctx.user) throw new Error("User not authenticated");
         const snapshot = await db
             .collection('collections')
-            .where('userId', '==', ctx.user.uid)
+            .where('userId', '==', ctx.user!.uid)
             .orderBy('createdAt', 'desc')
             .get();
         return snapshot.docs.map(doc => CollectionSchema.parse({ id: doc.id, ...doc.data() }));
@@ -433,9 +414,8 @@ const collectionRouter = router({
     get: privateProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ ctx, input }) => {
-            if (!ctx.user) throw new Error("User not authenticated");
             const collectionDoc = await db.collection('collections').doc(input.id).get();
-            if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
+            if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user!.uid) {
                 throw new Error('Collection not found or access denied.');
             }
             const collectionData = CollectionSchema.parse({ id: collectionDoc.id, ...collectionDoc.data() });
@@ -452,11 +432,10 @@ const collectionRouter = router({
     update: privateProcedure
         .input(UpdateCollectionInputSchema)
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user) throw new Error("User not authenticated");
             const { id, ...dataToUpdate } = input;
             const collectionRef = db.collection('collections').doc(id);
             const collectionDoc = await collectionRef.get();
-             if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
+             if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user!.uid) {
                 throw new Error('Collection not found or access denied.');
             }
             await collectionRef.update({
@@ -469,10 +448,9 @@ const collectionRouter = router({
     delete: privateProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user) throw new Error("User not authenticated");
             const collectionRef = db.collection('collections').doc(input.id);
             const collectionDoc = await collectionRef.get();
-             if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
+             if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user!.uid) {
                 throw new Error('Collection not found or access denied.');
             }
             await collectionRef.delete();
@@ -482,10 +460,9 @@ const collectionRouter = router({
     addCharacter: privateProcedure
         .input(z.object({ collectionId: z.string(), characterId: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user) throw new Error("User not authenticated");
             const collectionRef = db.collection('collections').doc(input.collectionId);
             const collectionDoc = await collectionRef.get();
-            if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
+            if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user!.uid) {
                 throw new Error('Collection not found or access denied.');
             }
             await collectionRef.update({
@@ -497,10 +474,9 @@ const collectionRouter = router({
     removeCharacter: privateProcedure
         .input(z.object({ collectionId: z.string(), characterId: z.string() }))
         .mutation(async ({ ctx, input }) => {
-             if (!ctx.user) throw new Error("User not authenticated");
              const collectionRef = db.collection('collections').doc(input.collectionId);
             const collectionDoc = await collectionRef.get();
-            if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
+            if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user!.uid) {
                 throw new Error('Collection not found or access denied.');
             }
             await collectionRef.update({
