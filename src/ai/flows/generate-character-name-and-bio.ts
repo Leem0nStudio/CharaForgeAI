@@ -30,6 +30,7 @@ export async function generateCharacterNameAndBio(input: GenerateCharacterNameAn
 
 const generateCharacterNameAndBioPrompt = ai.definePrompt({
   name: 'generateCharacterNameAndBioPrompt',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: GenerateCharacterNameAndBioInputSchema},
   output: {schema: GenerateCharacterNameAndBioOutputSchema},
   prompt: `You are a creative writer specializing in character development.
