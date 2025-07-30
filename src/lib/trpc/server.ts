@@ -567,11 +567,11 @@ const collectionRouter = router({
 const adminRouter = router({
     getStats: adminProcedure.query(async () => {
         const usersPromise = auth.listUsers();
-        const charactersPromise = db.collection('characters').count().get();
+        const charactersCountPromise = db.collection('characters').count().get();
 
         const [listUsersResult, charactersSnapshot] = await Promise.all([
             usersPromise,
-            charactersPromise,
+            charactersCountPromise,
         ]);
 
         const totalUsers = listUsersResult.users.length;
