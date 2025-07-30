@@ -74,7 +74,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         setIsAdmin(false);
       }
-      // Invalidate tRPC cache on auth state change
+      // Invalidate the entire tRPC cache on auth state change.
+      // This is the key to ensuring all components get fresh data after login.
       await utils.invalidate();
       router.refresh();
       setLoading(false);
