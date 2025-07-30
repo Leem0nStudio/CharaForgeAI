@@ -1,7 +1,7 @@
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
-import { auth } from '@/lib/firebase/server';
+import { auth, db } from '@/lib/firebase/server';
 
 const t = initTRPC.create();
 
@@ -30,6 +30,38 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const privateProcedure = t.procedure.use(isAuthenticated);
 
+const UserSchema = z.object({
+  uid: z.string(),
+  email: z.string().email(),
+  purchasedPacks: z.array(z.string()),
+  installedPacks: z.array(z.string()),
+  subscriptionTier: z.string(),
+});
+
+const UserUpdateSchema = UserSchema.partial();
+
+const userRouter = router({
+  getUser: privateProcedure.query(async ({ ctx }) => {
+    const userRef = db.collection('users').doc(ctx.user.uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      throw new Error('User not found');
+    }
+    return UserSchema.parse(userDoc.data());
+  }),
+  updateUser: privateProcedure
+    .input(UserUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userRef = db.collection('users').doc(ctx.user.uid);
+      await userRef.set(input, { merge: true });
+      return { success: true };
+    }),
+  deleteUser: privateProcedure.mutation(async ({ ctx }) => {
+    await db.collection('users').doc(ctx.user.uid).delete();
+    await auth.deleteUser(ctx.user.uid);
+    return { success: true };
+  }),
+});
 
 export const appRouter = router({
   greeting: publicProcedure
@@ -39,6 +71,7 @@ export const appRouter = router({
         greeting: `Hello ${input?.text ?? 'tRPC world'}`,
       };
     }),
+  user: userRouter,
 });
 
 export type AppRouter = typeof appRouter;

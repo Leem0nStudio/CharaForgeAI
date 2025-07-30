@@ -1,4 +1,4 @@
-import { auth } from "@/lib/firebase/server";
+import { auth, db } from "@/lib/firebase/server";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -23,6 +23,19 @@ export async function POST(request: NextRequest) {
       };
 
       cookies().set(options);
+
+      // Create user in Firestore if they don't exist
+      const userRef = db.collection("users").doc(decodedToken.uid);
+      const userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        await userRef.set({
+          uid: decodedToken.uid,
+          email: decodedToken.email,
+          purchasedPacks: [],
+          installedPacks: [],
+          subscriptionTier: "free",
+        });
+      }
     }
   }
 
