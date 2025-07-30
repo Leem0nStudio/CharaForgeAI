@@ -137,8 +137,14 @@ export function DataPackStore() {
                   onClick={() => handleUninstall(pack.id)}
                   disabled={isLoading || pack.id === 'core_base_styles'}
                 >
-                  <CheckCircle className="mr-2" />
-                  {isUninstalling ? 'Uninstalling...' : 'Installed'}
+                  {isUninstalling ? (
+                    'Uninstalling...'
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2" />
+                      Installed
+                    </>
+                  )}
                 </Button>
               ) : (
                 <Button
@@ -146,8 +152,14 @@ export function DataPackStore() {
                   onClick={() => handleInstall(pack.id)}
                   disabled={isLoading || authLoading}
                 >
-                  <Download className="mr-2" />
-                  {isInstalling ? 'Installing...' : 'Install'}
+                   {isInstalling ? (
+                    'Installing...'
+                  ) : (
+                    <>
+                     <Download className="mr-2" />
+                     Install
+                    </>
+                  )}
                 </Button>
               )}
             </CardContent>
@@ -157,3 +169,4 @@ export function DataPackStore() {
     </div>
   );
 }
+
