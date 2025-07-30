@@ -51,33 +51,11 @@ const generateCharacterNameAndBioFlow = ai.defineFlow(
   async input => {
     const { userId, datapackId, userPreferences } = input;
 
-    // DataPack Access Validation
+    // The user must exist, but we don't need to validate the datapack for now.
     const userRef = db.collection('users').doc(userId);
-    const packRef = db.collection('datapacks').doc(datapackId);
-
-    const [userDoc, packDoc] = await Promise.all([userRef.get(), packRef.get()]);
-
+    const userDoc = await userRef.get();
     if (!userDoc.exists) {
       throw new Error('User not found.');
-    }
-    if (!packDoc.exists) {
-      throw new Error('DataPack not found.');
-    }
-
-    const user = userDoc.data()!;
-    const pack = packDoc.data()!;
-
-    // 1. Check if the pack is installed
-    if (!user.installedPacks?.includes(datapackId)) {
-      throw new Error(`DataPack '${datapackId}' is not installed for this user.`);
-    }
-
-    // 2. Check for permissions
-    if (pack.premiumStatus === 'purchased' && !user.purchasedPacks?.includes(datapackId)) {
-        throw new Error(`User has not purchased DataPack '${datapackId}'.`);
-    }
-    if (pack.premiumStatus === 'subscription' && user.subscriptionTier === 'free') {
-        throw new Error(`User does not have the required subscription tier for DataPack '${datapackId}'.`);
     }
 
     const {output} = await generateCharacterNameAndBioPrompt({ userPreferences, userId, datapackId });
