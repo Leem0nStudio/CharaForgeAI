@@ -28,9 +28,9 @@ export function DataPackStore() {
   });
 
   const installMutation = trpc.user.installDataPack.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       utils.user.getUser.invalidate();
-      utils.datapack.listInstalled.invalidate();
+      utils.datapack.getByIds.invalidate();
       toast({
         title: "Pack Installed",
         description: "The DataPack has been added to your library.",
@@ -48,7 +48,7 @@ export function DataPackStore() {
   const uninstallMutation = trpc.user.uninstallDataPack.useMutation({
     onSuccess: () => {
       utils.user.getUser.invalidate();
-      utils.datapack.listInstalled.invalidate();
+      utils.datapack.getByIds.invalidate();
       toast({
         title: "Pack Uninstalled",
         description: "The DataPack has been removed from your library.",
@@ -169,4 +169,3 @@ export function DataPackStore() {
     </div>
   );
 }
-
