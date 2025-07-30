@@ -12,7 +12,7 @@ admin.initializeApp({
 });
 
 // Reemplaza con el UID del usuario que quieres que sea admin
-const uid = 'REEMPLAZA_CON_EL_UID_DE_TU_USUARIO';
+const uid = '9BMM9bNrqiagcBZ7IgSIOnH7ah43';
 
 admin.auth().setCustomUserClaims(uid, { admin: true })
   .then(() => {
