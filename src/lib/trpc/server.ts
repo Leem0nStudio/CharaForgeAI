@@ -13,7 +13,7 @@ import { cookies, ReadonlyRequestCookies } from 'next/headers';
 // It now receives the cookies object directly from the request handler.
 export const createContext = async (cookieStore: ReadonlyRequestCookies) => {
   // Intenta leer la cookie dentro de un Promise.resolve() para asegurar el contexto asíncrono
-  const sessionCookie = cookieStore.get('__session')?.value || '';
+  const sessionCookie = (await cookieStore.get('__session'))?.value || '';
 
   if (!sessionCookie) {
     return { user: null };
@@ -307,9 +307,14 @@ const characterRouter = router({
     }),
 
   listPublicCharacters: publicProcedure
-    .query(async () => {
-      const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(50).get();
-      return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
+    .input(z.object({ limit: z.number().min(1).max(50).optional() }))
+    .query(async ({ input }) => {
+        const limit = input?.limit ?? 50;
+        const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(limit).get();
+        const characters = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(char => char.imageUrl); // Ensure imageUrl exists
+        return characters.map(char => CharacterSchema.parse(char));
     }),
   
   getTopCharacters: publicProcedure
