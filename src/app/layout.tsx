@@ -24,17 +24,17 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <TrpcProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AuthProvider>
-              {children}
-            </AuthProvider>
-            <Toaster />
-          </ThemeProvider>
+          <AuthProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+                {children}
+              <Toaster />
+            </ThemeProvider>
+          </AuthProvider>
         </TrpcProvider>
       </body>
     </html>

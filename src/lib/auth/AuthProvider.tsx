@@ -11,7 +11,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client"; // db is not used, can be removed
 import { useRouter } from "next/navigation";
-import { trpc } from "@/lib/trpc/client";
+import { trpcClient } from "@/lib/trpc/client";
 import { FieldValue } from "firebase/firestore"; // Not used here, can be removed
 
 type AuthContextType = {
@@ -60,7 +60,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const utils = trpc.useUtils();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (userState) => {
@@ -74,15 +73,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         setIsAdmin(false);
       }
+      
       // Invalidate the entire tRPC cache on auth state change.
       // This is the key to ensuring all components get fresh data after login.
-      await utils.invalidate();
+      await trpcClient.queryClient.invalidateQueries();
       router.refresh();
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router, utils]);
+  }, [router]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
