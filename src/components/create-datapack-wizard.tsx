@@ -36,7 +36,7 @@ const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
   description: z.string().min(10, "Description must be at least 10 characters."),
   premiumStatus: z.enum(['free', 'purchased', 'subscription']),
-  promptTemplateContent: z.string().min(20, "Template content is required and must be a valid YAML structure.")
+  promptTemplateContent: z.string().optional()
 });
 
 type CreateDataPackWizardProps = {
@@ -54,7 +54,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
             name: "",
             description: "",
             premiumStatus: "free",
-            promptTemplateContent: `template: |\n  \n\nnegative_prompt: |\n  \n\nplaceholders:\n  `,
+            promptTemplateContent: `template: |\n  A high quality fantasy portrait of {name}, a {class}, with {accessory}.\n\nnegative_prompt: |\n  low quality, blurry, ugly\n\nplaceholders:\n  name:\n    type: text\n    label: Character Name\n  class:\n    type: select\n    label: Class\n    options:\n      - Warrior\n      - Mage\n      - Rogue\n  accessory:\n    type: text\n    label: Key Accessory`,
         },
     });
     
@@ -165,7 +165,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                         <Card>
                              <CardHeader>
                                 <CardTitle>Prompt Template</CardTitle>
-                                <CardDescription>Define the YAML structure for the prompt generation UI.</CardDescription>
+                                <CardDescription>Define the YAML structure for the prompt generation UI. Leave blank if not needed.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                  <FormField
@@ -214,7 +214,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                                 </div>
                                  <div>
                                     <h4 className="font-semibold">Template Content:</h4>
-                                    <pre className="bg-muted p-4 rounded-md text-xs max-h-60 overflow-auto">{watchedValues.promptTemplateContent}</pre>
+                                    <pre className="bg-muted p-4 rounded-md text-xs max-h-60 overflow-auto">{watchedValues.promptTemplateContent || "No template provided."}</pre>
                                 </div>
                             </CardContent>
                         </Card>

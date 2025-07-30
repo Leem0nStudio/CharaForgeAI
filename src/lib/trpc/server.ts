@@ -173,7 +173,7 @@ const DataPackSchema = z.object({
 });
 
 const CreateDataPackInputSchema = DataPackSchema.omit({id: true, createdAt: true, promptTemplate: true}).extend({
-    promptTemplateContent: z.string()
+    promptTemplateContent: z.string().optional()
 });
 
 const ensureCoreDataPackExists = async () => {
@@ -215,8 +215,9 @@ const dataPackRouter = router({
         const packRef = db.collection('datapacks').doc();
         const packId = packRef.id;
         
-        // No prompt template for the default creator.
-        if (promptTemplateContent && promptTemplateContent.trim() !== '' && !promptTemplateContent.includes('template: |')) {
+        let promptTemplateUrl = '';
+
+        if (promptTemplateContent && promptTemplateContent.trim() !== '') {
             const bucket = getStorage().bucket();
             const filePath = `DataPacks/${packId}/prompt_template.yaml`;
             const file = bucket.file(filePath);
@@ -225,20 +226,15 @@ const dataPackRouter = router({
                 contentType: 'text/yaml',
                 gzip: true,
             });
-             await packRef.set({
-                ...packData,
-                content: [],
-                promptTemplate: `gs://${bucket.name}/${filePath}`,
-                createdAt: FieldValue.serverTimestamp(),
-            });
-        } else {
-             await packRef.set({
-                ...packData,
-                content: [],
-                promptTemplate: '',
-                createdAt: FieldValue.serverTimestamp(),
-            });
+            promptTemplateUrl = `gs://${bucket.name}/${filePath}`;
         }
+        
+        await packRef.set({
+            ...packData,
+            content: [],
+            promptTemplate: promptTemplateUrl,
+            createdAt: FieldValue.serverTimestamp(),
+        });
         
         return { success: true, id: packId };
     }),
@@ -248,24 +244,25 @@ const dataPackRouter = router({
       return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
     }),
     listInstalled: privateProcedure.query(async ({ ctx }) => {
-    const userRef = db.collection('users').doc(ctx.user.uid);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
-    }
-    const userData = userDoc.data();
-    const installedPackIds = userData?.installedPacks || [];
+        const userRef = db.collection('users').doc(ctx.user.uid);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+        }
+        const userData = userDoc.data();
+        const installedPackIds = userData?.installedPacks || [];
 
-    if (installedPackIds.length === 0) {
-      return [];
-    }
+        if (installedPackIds.length === 0) {
+        return [];
+        }
 
-    const packsSnapshot = await db
-      .collection('datapacks')
-      .where(FieldValue.documentId(), 'in', installedPackIds)
-      .get();
-      
-    return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
+        const packsSnapshot = await db
+        .collection('datapacks')
+        .where(FieldValue.documentId(), 'in', installedPackIds)
+        .get();
+        
+        const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
+        return packs;
   }),
 });
 
