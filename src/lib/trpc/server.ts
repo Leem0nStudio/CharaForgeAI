@@ -104,6 +104,105 @@ const dataPackRouter = router({
   }),
 });
 
+const CharacterSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  name: z.string(),
+  bio: z.string(),
+  imageUrl: z.string().url(),
+  associatedDataPacks: z.array(z.string()),
+  publicStatus: z.boolean().default(false),
+  likes: z.number().default(0),
+});
+
+const CreateCharacterInputSchema = CharacterSchema.omit({ id: true, userId: true, likes: true, publicStatus: true }).extend({
+  publicStatus: z.boolean().optional(),
+});
+
+const UpdateCharacterInputSchema = CreateCharacterInputSchema.partial().extend({
+  id: z.string(),
+});
+
+
+const characterRouter = router({
+  createCharacter: privateProcedure
+    .input(CreateCharacterInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const characterData = {
+        ...input,
+        userId: ctx.user.uid,
+        likes: 0,
+        publicStatus: input.publicStatus ?? false,
+        createdAt: FieldValue.serverTimestamp(),
+      };
+      const characterRef = await db.collection('characters').add(characterData);
+      return { id: characterRef.id, ...characterData };
+    }),
+
+  getCharacter: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const characterDoc = await db.collection('characters').doc(input.id).get();
+      if (!characterDoc.exists) {
+        throw new Error('Character not found');
+      }
+      return CharacterSchema.parse({ id: characterDoc.id, ...characterDoc.data() });
+    }),
+  
+  listUserCharacters: privateProcedure
+    .query(async ({ ctx }) => {
+      const snapshot = await db.collection('characters').where('userId', '==', ctx.user.uid).orderBy('createdAt', 'desc').get();
+      return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
+    }),
+
+  listPublicCharacters: publicProcedure
+    .query(async () => {
+      const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(50).get();
+      return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
+    }),
+
+  updateCharacter: privateProcedure
+    .input(UpdateCharacterInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...dataToUpdate } = input;
+      const characterRef = db.collection('characters').doc(id);
+      const characterDoc = await characterRef.get();
+
+      if (!characterDoc.exists) {
+        throw new Error('Character not found.');
+      }
+      if (characterDoc.data()?.userId !== ctx.user.uid) {
+        throw new Error('User not authorized to update this character.');
+      }
+
+      await characterRef.update({
+        ...dataToUpdate,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { success: true };
+    }),
+
+  deleteCharacter: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const characterRef = db.collection('characters').doc(input.id);
+      const characterDoc = await characterRef.get();
+
+      if (!characterDoc.exists) {
+        throw new Error('Character not found.');
+      }
+      if (characterDoc.data()?.userId !== ctx.user.uid) {
+        throw new Error('User not authorized to delete this character.');
+      }
+
+      await characterRef.delete();
+      // Note: This doesn't delete the associated image from Cloud Storage.
+      // That would require a separate, more complex implementation.
+      return { success: true };
+    }),
+});
+
+
 export const appRouter = router({
   greeting: publicProcedure
     .input(z.object({ text: z.string().nullish() }).nullish())
@@ -114,6 +213,7 @@ export const appRouter = router({
     }),
   user: userRouter,
   datapack: dataPackRouter,
+  character: characterRouter,
 });
 
 export type AppRouter = typeof appRouter;
