@@ -63,6 +63,25 @@ const userRouter = router({
   }),
 });
 
+const DataPackSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  premiumStatus: z.enum(['free', 'purchased', 'subscription']),
+  content: z.array(z.object({
+    type: z.string(),
+    reference: z.string(),
+  })),
+});
+
+const dataPackRouter = router({
+  list: publicProcedure.query(async () => {
+    const packsSnapshot = await db.collection('datapacks').get();
+    const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
+    return packs;
+  }),
+});
+
 export const appRouter = router({
   greeting: publicProcedure
     .input(z.object({ text: z.string().nullish() }).nullish())
@@ -72,6 +91,7 @@ export const appRouter = router({
       };
     }),
   user: userRouter,
+  datapack: dataPackRouter,
 });
 
 export type AppRouter = typeof appRouter;
