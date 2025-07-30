@@ -246,6 +246,26 @@ const dataPackRouter = router({
       const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
       return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
     }),
+    listInstalled: privateProcedure.query(async ({ ctx }) => {
+    const userRef = db.collection('users').doc(ctx.user.uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+    }
+    const userData = userDoc.data();
+    const installedPackIds = userData?.installedPacks || [];
+
+    if (installedPackIds.length === 0) {
+      return [];
+    }
+
+    const packsSnapshot = await db
+      .collection('datapacks')
+      .where(FieldValue.documentId(), 'in', installedPackIds)
+      .get();
+      
+    return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
+  }),
 });
 
 const CharacterSchema = z.object({

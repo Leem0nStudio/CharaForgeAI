@@ -61,10 +61,9 @@ export function CharacterCreator() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  const { data: userData, isLoading: isUserLoading } = trpc.user.getUser.useQuery(undefined, { enabled: !!user });
-  const { data: allPacks, isLoading: arePacksLoading } = trpc.datapack.list.useQuery();
-
-  const installedPacks = allPacks?.filter(p => userData?.installedPacks.includes(p.id)) || [];
+  const { data: installedPacks, isLoading: arePacksLoading } = trpc.datapack.listInstalled.useQuery(undefined, {
+    enabled: !!user,
+  });
 
   const createCharacterMutation = trpc.character.createCharacter.useMutation({
     onSuccess: () => {
@@ -100,9 +99,14 @@ export function CharacterCreator() {
           if (response.status !== 404) { // Ignore 404s, it just means no template
              throw new Error(`Failed to fetch template: ${response.statusText}`);
           }
+          setPromptTemplate(null); // Explicitly set to null if not found
           return;
         }
         const yamlText = await response.text();
+        if (yamlText.trim() === '') {
+            setPromptTemplate(null); // Handle empty template file
+            return;
+        }
         const parsed = parsePromptTemplateYAML(yamlText);
         setPromptTemplate(parsed);
       } catch (error: any) {
@@ -181,12 +185,12 @@ export function CharacterCreator() {
         <CardDescription>Select one of your installed DataPacks to define the character's core style.</CardDescription>
       </CardHeader>
       <CardContent>
-        {isUserLoading || arePacksLoading ? (
+        {arePacksLoading ? (
            <div className="grid grid-cols-2 gap-4">
              <Skeleton className="h-24 w-full" />
              <Skeleton className="h-24 w-full" />
            </div>
-        ) : installedPacks.length > 0 ? (
+        ) : installedPacks && installedPacks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {installedPacks.map((pack) => (
               <Card
@@ -202,7 +206,7 @@ export function CharacterCreator() {
             ))}
           </div>
         ) : (
-            <p>No data packs installed.</p>
+            <p className="text-muted-foreground p-4 text-center">No data packs installed. Go to the main page to find and install new DataPacks.</p>
         )}
       </CardContent>
     </Card>
@@ -318,5 +322,3 @@ export function CharacterCreator() {
     </div>
   );
 }
-
-    
