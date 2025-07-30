@@ -9,10 +9,9 @@ import {
   User,
   getIdToken,
 } from "firebase/auth";
-import { auth, db } from "@/lib/firebase/client"; // db is not used, can be removed
+import { auth, db } from "@/lib/firebase/client";
 import { useRouter } from "next/navigation";
-import { trpcClient } from "@/lib/trpc/client";
-import { FieldValue } from "firebase/firestore"; // Not used here, can be removed
+import { queryClient } from "@/lib/trpc/client";
 
 type AuthContextType = {
   user: User | null;
@@ -76,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Invalidate the entire tRPC cache on auth state change.
       // This is the key to ensuring all components get fresh data after login.
-      await trpcClient.queryClient.invalidateQueries();
+      await queryClient.invalidateQueries();
       router.refresh();
       setLoading(false);
     });
