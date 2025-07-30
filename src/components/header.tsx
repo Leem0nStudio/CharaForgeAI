@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { Moon, Sun, LogIn, LogOut, ShieldCheck, Search, Sprout } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -22,9 +22,11 @@ export function Header() {
   return (
     <header className="py-6 px-4 md:px-8 border-b shadow-sm flex justify-between items-center">
       <div>
-        <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary">
-          CharaForge AI
-        </h1>
+        <Link href="/" className="flex items-center gap-2">
+            <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary">
+            CharaForge AI
+            </h1>
+        </Link>
         <p className="text-muted-foreground mt-1">
           Craft unique characters with the power of AI
         </p>
@@ -46,9 +48,27 @@ export function Header() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
                <DropdownMenuItem asChild>
+                <Link href="/">
+                  <Sprout className="mr-2 h-4 w-4" />
+                  <span>Creator</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/vault">
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   <span>Character Vault</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/explore">
+                  <Search className="mr-2 h-4 w-4" />
+                  <span>Explore</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/collections">
+                  <Search className="mr-2 h-4 w-4" />
+                  <span>Collections</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

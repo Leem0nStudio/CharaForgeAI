@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import Image from "next/image";
-import { Edit, Trash2, Globe, Lock } from "lucide-react";
+import { Edit, Trash2, Globe, Lock, Heart, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,8 +34,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EditCharacterForm } from "@/components/edit-character-form";
+import { AddToCollection } from "@/components/add-to-collection";
 import type { AppRouter } from "@/lib/trpc/server";
 import type { inferRouterOutputs } from "@trpc/server";
+import Link from "next/link";
 
 type Character = inferRouterOutputs<AppRouter["character"]["listUserCharacters"]>[number];
 
@@ -109,7 +111,7 @@ export function CharacterVault() {
       <div className="text-center py-16 border-2 border-dashed rounded-lg">
         <h3 className="text-xl font-semibold">Your Vault is Empty</h3>
         <p className="text-muted-foreground mt-2">
-          Go to the Character Creator to forge your first character!
+          Go to the <Link href="/" className="text-primary hover:underline">Character Creator</Link> to forge your first character!
         </p>
       </div>
     );
@@ -119,7 +121,7 @@ export function CharacterVault() {
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {characters.map((character) => (
-          <Card key={character.id} className="flex flex-col overflow-hidden">
+          <Card key={character.id} className="flex flex-col overflow-hidden group">
             <div className="relative">
               <Image
                 src={character.imageUrl}
@@ -139,6 +141,13 @@ export function CharacterVault() {
                   <Lock className="h-3 w-3" />
                 )}
                 <span>{character.publicStatus ? "Public" : "Private"}</span>
+              </div>
+              <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full px-2 py-1 text-xs bg-black/50 text-white">
+                  <Heart className="h-3 w-3" />
+                  <span>{character.likes}</span>
+              </div>
+               <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <AddToCollection characterId={character.id} />
               </div>
             </div>
             <CardHeader>
