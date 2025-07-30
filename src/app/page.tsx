@@ -43,7 +43,7 @@ function FeaturedCharacters() {
   if (error) {
     return (
       <div className="text-destructive text-center col-span-full">
-        Error al cargar los personajes: {error.message}
+        Error loading characters: {error.message}
       </div>
     );
   }
@@ -53,7 +53,7 @@ function FeaturedCharacters() {
       {characters?.map((character) => (
         <Card
           key={character.id}
-          className="overflow-hidden transition-transform transform hover:-translate-y-1"
+          className="overflow-hidden transition-transform transform hover:-translate-y-1 group border-transparent hover:border-primary/50 bg-secondary/20 hover:bg-secondary/40"
         >
           <Image
             src={character.imageUrl}
@@ -99,7 +99,7 @@ function TopCreators() {
   if (error) {
     return (
       <div className="text-destructive text-center col-span-full">
-        Error al cargar los creadores: {error.message}
+        Error loading creators: {error.message}
       </div>
     );
   }
@@ -108,8 +108,8 @@ function TopCreators() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {creators?.map((creator) => (
-        <Card key={creator.uid} className="flex items-center p-4 gap-4">
-          <Avatar className="h-12 w-12">
+        <Card key={creator.uid} className="flex items-center p-4 gap-4 bg-secondary/20 hover:bg-secondary/40 transition-colors">
+          <Avatar className="h-12 w-12 border-2 border-primary/50">
             <AvatarImage src={creator.photoURL ?? ""} />
             <AvatarFallback>{creator.displayName?.charAt(0)}</AvatarFallback>
           </Avatar>
@@ -132,15 +132,15 @@ export default function Home() {
       <Header />
       <main className="container mx-auto px-4 py-8 md:py-12">
         <section className="text-center mb-12 md:mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">
-            Bienvenido a CharaForge AI
+          <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-primary to-blue-400 text-transparent bg-clip-text">
+            Welcome to CharaForge AI
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
-            Tu taller de creatividad para dar vida a personajes únicos con el poder de la inteligencia artificial. Explora, crea y comparte.
+            Your creative workshop to bring unique characters to life with the power of artificial intelligence. Explore, create, and share.
           </p>
           <Button asChild size="lg">
             <Link href="/create">
-              Comienza a Crear
+              Start Creating
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
@@ -150,10 +150,10 @@ export default function Home() {
           <div className="flex justify-between items-center mb-6">
              <h2 className="text-2xl md:text-3xl font-bold font-headline flex items-center">
               <Heart className="mr-3 h-7 w-7 text-primary" />
-              Personajes Destacados
+              Featured Characters
             </h2>
             <Button variant="outline" asChild>
-                <Link href="/explore">Ver Galería <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/explore">View Gallery <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
           <FeaturedCharacters />
@@ -163,7 +163,7 @@ export default function Home() {
            <div className="flex justify-between items-center mb-6">
              <h2 className="text-2xl md:text-3xl font-bold font-headline flex items-center">
                 <Users className="mr-3 h-7 w-7 text-primary" />
-                Creadores Top
+                Top Creators
             </h2>
           </div>
           <TopCreators />
@@ -173,7 +173,7 @@ export default function Home() {
           <div className="flex justify-between items-center mb-6">
              <h2 className="text-2xl md:text-3xl font-bold font-headline flex items-center">
                 <Package className="mr-3 h-7 w-7 text-primary" />
-                Nuevos DataPacks
+                New DataPacks
             </h2>
           </div>
           <DataPackStore />

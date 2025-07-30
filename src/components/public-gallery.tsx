@@ -70,7 +70,7 @@ export function PublicGallery() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
-          <Card key={i}>
+          <Card key={i} className="bg-secondary/20">
             <Skeleton className="h-64 w-full" />
             <CardHeader>
               <Skeleton className="h-6 w-1/2" />
@@ -94,7 +94,7 @@ export function PublicGallery() {
   
   if (!characters || characters.length === 0) {
     return (
-      <div className="text-center py-16 border-2 border-dashed rounded-lg">
+      <div className="text-center py-16 border-2 border-dashed rounded-lg border-border/50">
         <h3 className="text-xl font-semibold">The Gallery is Empty</h3>
         <p className="text-muted-foreground mt-2">
           Be the first to make a character public!
@@ -109,7 +109,7 @@ export function PublicGallery() {
         const isLiked = user ? character.likedBy.includes(user.uid) : false;
 
         return (
-          <Card key={character.id} className="flex flex-col overflow-hidden group">
+          <Card key={character.id} className="flex flex-col overflow-hidden group transition-all duration-300 bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-primary/50 hover:shadow-primary/20 hover:shadow-lg">
             <div className="relative">
               <Image
                 src={character.imageUrl}
@@ -137,7 +137,7 @@ export function PublicGallery() {
                 onClick={() => handleLikeToggle(character.id, isLiked)}
                 disabled={likeMutation.isPending || unlikeMutation.isPending || !user}
               >
-                <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                <Heart className={`mr-2 h-4 w-4 transition-colors ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                 {character.likes} {character.likes === 1 ? "Like" : "Likes"}
               </Button>
             </CardFooter>

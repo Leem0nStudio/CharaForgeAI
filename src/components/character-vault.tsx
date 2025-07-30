@@ -83,7 +83,7 @@ export function CharacterVault() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
+          <Card key={i} className="bg-secondary/20">
             <Skeleton className="h-64 w-full" />
             <CardHeader>
               <Skeleton className="h-6 w-1/2" />
@@ -108,10 +108,10 @@ export function CharacterVault() {
 
   if (!characters || characters.length === 0) {
     return (
-      <div className="text-center py-16 border-2 border-dashed rounded-lg">
+      <div className="text-center py-16 border-2 border-dashed rounded-lg border-border/50">
         <h3 className="text-xl font-semibold">Your Vault is Empty</h3>
         <p className="text-muted-foreground mt-2">
-          Go to the <Link href="/" className="text-primary hover:underline">Character Creator</Link> to forge your first character!
+          Go to the <Link href="/create" className="text-primary hover:underline">Character Creator</Link> to forge your first character!
         </p>
       </div>
     );
@@ -121,7 +121,7 @@ export function CharacterVault() {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {characters.map((character) => (
-          <Card key={character.id} className="flex flex-col overflow-hidden group">
+          <Card key={character.id} className="flex flex-col overflow-hidden group transition-all duration-300 bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-primary/50 hover:shadow-primary/20 hover:shadow-lg">
             <div className="relative">
               <Image
                 src={character.imageUrl}

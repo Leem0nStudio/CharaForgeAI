@@ -143,9 +143,9 @@ export function CharacterCreator() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-6xl mx-auto">
-      <Card>
+      <Card className="bg-secondary/20 border-border/50">
         <CardHeader>
-          <CardTitle className="font-headline">Describe Your Character</CardTitle>
+          <CardTitle className="font-headline text-3xl">Describe Your Character</CardTitle>
           <CardDescription>
             Provide a description, and our AI will bring your character to life.
           </CardDescription>
@@ -162,7 +162,7 @@ export function CharacterCreator() {
                     <FormControl>
                       <Textarea
                         placeholder="e.g., 'A wise old wizard with a long white beard, a mischievous twinkle in his eyes, holding a glowing staff.'"
-                        className="min-h-[120px] resize-y"
+                        className="min-h-[120px] resize-y bg-background/50 focus:bg-background"
                         {...field}
                       />
                     </FormControl>
@@ -187,7 +187,7 @@ export function CharacterCreator() {
         </Form>
       </Card>
       
-      <Card className="min-h-[400px] flex flex-col justify-center transition-all duration-300">
+      <Card className="min-h-[400px] flex flex-col justify-center transition-all duration-300 bg-secondary/20 border-border/50">
         {isLoading && (
           <div className="animate-in fade-in">
              <Skeleton className="w-full aspect-square rounded-t-lg" />
@@ -222,7 +222,7 @@ export function CharacterCreator() {
               />
             </CardHeader>
             <CardContent className="p-6">
-              <h2 className="text-3xl font-bold font-headline text-primary-foreground bg-primary -ml-8 pl-8 pr-4 py-2 rounded-r-full shadow-md inline-block">
+              <h2 className="text-3xl font-bold font-headline text-primary-foreground bg-gradient-to-r from-primary to-blue-400 -ml-8 pl-8 pr-4 py-2 rounded-r-full shadow-lg">
                 {character.name}
               </h2>
               <p className="mt-4 text-foreground/80 whitespace-pre-wrap leading-relaxed">

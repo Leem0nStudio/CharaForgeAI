@@ -20,10 +20,10 @@ export function Header() {
   const { user, isAdmin, signInWithGoogle, signOut } = useAuth();
 
   return (
-    <header className="py-4 px-4 md:px-8 border-b shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+    <header className="py-4 px-4 md:px-8 border-b shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="text-center md:text-left">
         <Link href="/" className="flex items-center justify-center md:justify-start gap-2">
-            <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary">
+            <h1 className="text-2xl md:text-3xl font-headline font-bold bg-gradient-to-r from-primary to-blue-400 text-transparent bg-clip-text">
             CharaForge AI
             </h1>
         </Link>
@@ -43,7 +43,7 @@ export function Header() {
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-10 w-10 border-2 border-primary/50">
                     <AvatarImage src={user.photoURL ?? ""} alt={user.displayName ?? ""} />
                     <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
                     </Avatar>
