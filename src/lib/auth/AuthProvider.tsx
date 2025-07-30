@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       setUser(user);
       if (user) {
         const idTokenResult = await user.getIdTokenResult();
@@ -50,8 +51,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      // Gracefully handle the case where the user closes the sign-in popup.
-      // This is a normal user action, not an error to be reported.
       if (error.code === "auth/popup-closed-by-user") {
         return;
       }
