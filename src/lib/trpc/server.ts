@@ -225,10 +225,6 @@ const ensureCoreDataPackExists = async () => {
 
 
 const dataPackRouter = router({
-  list: publicProcedure.query(async () => {
-    const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
-    return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
-  }),
   getNewDataPacks: publicProcedure
     .input(z.object({ limit: z.number().min(1).max(20).optional() }))
     .query(async ({ input }) => {

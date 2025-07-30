@@ -63,14 +63,14 @@ export function CharacterCreator() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  const { data: userData } = trpc.user.getUser.useQuery(undefined, {
+  const { data: userData, isLoading: isUserLoading } = trpc.user.getUser.useQuery(undefined, {
     enabled: !!user,
   });
 
   const { data: installedPacks, isLoading: arePacksLoading } = trpc.datapack.getByIds.useQuery(
     { ids: userData?.installedPacks || [] },
     {
-      enabled: !!user && !!userData?.installedPacks && userData.installedPacks.length > 0,
+      enabled: !!userData?.installedPacks && userData.installedPacks.length > 0,
     }
   );
 
@@ -194,7 +194,7 @@ export function CharacterCreator() {
         <CardDescription>Select one of your installed DataPacks to define the character's core style.</CardDescription>
       </CardHeader>
       <CardContent>
-        {arePacksLoading ? (
+        {isUserLoading || (arePacksLoading && userData && userData.installedPacks.length > 0) ? (
            <div className="grid grid-cols-2 gap-4">
              <Skeleton className="h-24 w-full" />
              <Skeleton className="h-24 w-full" />
@@ -205,7 +205,7 @@ export function CharacterCreator() {
               <Card
                 key={pack.id}
                 className="cursor-pointer hover:border-primary transition-colors bg-background/50"
-                onClick={() => setSelectedPack(pack)}
+                onClick={() => setSelectedPack({id: pack.id, name: pack.name})}
               >
                 <CardHeader>
                   <CardTitle className="text-lg">{pack.name}</CardTitle>
@@ -336,5 +336,3 @@ export function CharacterCreator() {
     </div>
   );
 }
-
-    
