@@ -226,7 +226,6 @@ const ensureCoreDataPackExists = async () => {
 
 const dataPackRouter = router({
   list: publicProcedure.query(async () => {
-    await ensureCoreDataPackExists();
     const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
     return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
   }),
