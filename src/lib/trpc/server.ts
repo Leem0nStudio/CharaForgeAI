@@ -96,6 +96,53 @@ const userRouter = router({
       });
       return { success: true };
     }),
+  getTopCreators: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(20).optional() }))
+    .query(async ({ input }) => {
+        const limit = input?.limit ?? 10;
+        
+        // This is a simplified approach. A more scalable solution might involve
+        // aggregating likes on a user document.
+        const charactersSnapshot = await db
+            .collection('characters')
+            .where('publicStatus', '==', true)
+            .orderBy('likes', 'desc')
+            .limit(100) // Get a larger pool of characters to find unique creators
+            .get();
+
+        const userLikes: Record<string, { totalLikes: number; userId: string }> = {};
+        
+        charactersSnapshot.docs.forEach(doc => {
+            const character = doc.data();
+            if (character.userId) {
+                if (!userLikes[character.userId]) {
+                    userLikes[character.userId] = { totalLikes: 0, userId: character.userId };
+                }
+                userLikes[character.userId].totalLikes += (character.likes || 0);
+            }
+        });
+
+        const sortedCreators = Object.values(userLikes).sort((a, b) => b.totalLikes - a.totalLikes);
+        const topCreatorIds = sortedCreators.slice(0, limit).map(c => c.userId);
+
+        if (topCreatorIds.length === 0) {
+            return [];
+        }
+
+        const userRecords = await auth.getUsers(topCreatorIds.map(uid => ({ uid })));
+        
+        const creators = userRecords.users.map(user => {
+            const userProfile = {
+                uid: user.uid,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                totalLikes: userLikes[user.uid]?.totalLikes || 0
+            }
+            return userProfile;
+        });
+
+        return creators.sort((a, b) => b.totalLikes - a.totalLikes);
+    }),
 });
 
 const DataPackSchema = z.object({
@@ -107,14 +154,23 @@ const DataPackSchema = z.object({
     type: z.string(),
     reference: z.string(),
   })),
+  createdAt: z.any().optional(), // Make optional for existing docs
 });
 
 const dataPackRouter = router({
   list: publicProcedure.query(async () => {
-    const packsSnapshot = await db.collection('datapacks').get();
+    const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
     const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
     return packs;
   }),
+  getNewDataPacks: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(20).optional() }))
+    .query(async ({ input }) => {
+        const limit = input?.limit ?? 4;
+        const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').limit(limit).get();
+        const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
+        return packs;
+    }),
 });
 
 const CharacterSchema = z.object({
@@ -173,6 +229,14 @@ const characterRouter = router({
     .query(async () => {
       const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(50).get();
       return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
+    }),
+  
+  getTopCharacters: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).optional() }))
+    .query(async ({ input }) => {
+        const limit = input?.limit ?? 8;
+        const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(limit).get();
+        return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
     }),
 
   updateCharacter: privateProcedure
@@ -396,13 +460,6 @@ const adminRouter = router({
 });
 
 export const appRouter = router({
-  greeting: publicProcedure
-    .input(z.object({ text: z.string().nullish() }).nullish())
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input?.text ?? 'tRPC world'}`,
-      };
-    }),
   user: userRouter,
   datapack: dataPackRouter,
   character: characterRouter,
