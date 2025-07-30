@@ -1,6 +1,11 @@
+"use client";
+
 import { CharacterCreator } from "@/components/character-creator";
+import { trpc } from "@/lib/trpc/client";
 
 export default function Home() {
+  const { data } = trpc.greeting.useQuery();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="py-6 px-4 md:px-8 border-b shadow-sm">
@@ -10,6 +15,7 @@ export default function Home() {
         <p className="text-muted-foreground mt-1">
           Craft unique characters with the power of AI
         </p>
+        {data && <p className="text-accent-foreground mt-2">{data.greeting}</p>}
       </header>
       <main className="p-4 md:p-8">
         <CharacterCreator />
