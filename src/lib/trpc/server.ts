@@ -11,7 +11,8 @@ import { cookies, ReadonlyRequestCookies } from 'next/headers';
 // This function is responsible for creating the context for each request.
 // It now receives the cookies object directly from the request handler.
 export const createContext = async (cookieStore: ReadonlyRequestCookies) => {
-  const sessionCookie = cookieStore.get('__session')?.value || '';
+  // Intenta leer la cookie dentro de un Promise.resolve() para asegurar el contexto asíncrono
+  const sessionCookie = await Promise.resolve(cookieStore.get('__session')?.value || '');
 
   if (!sessionCookie) {
     return { user: null };
@@ -511,7 +512,7 @@ const adminRouter = router({
 
         const [listUsersResult, charactersSnapshot] = await Promise.all([
             usersPromise,
-            charactersPromise,
+            charactersSnapshot,
         ]);
 
         const totalUsers = listUsersResult.users.length;
