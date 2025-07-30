@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -70,7 +71,7 @@ export function CollectionsList() {
         </Dialog>
     </div>
 
-    {collections.length === 0 ? (
+    {collections && collections.length === 0 ? (
          <div className="text-center py-16 border-2 border-dashed rounded-lg">
             <h3 className="text-xl font-semibold">No Collections Yet</h3>
             <p className="text-muted-foreground mt-2">
@@ -79,7 +80,7 @@ export function CollectionsList() {
       </div>
     ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        {collections.map((collection) => (
+        {collections?.map((collection) => (
           <Link href={`/collections/${collection.id}`} key={collection.id}>
             <Card className="hover:shadow-lg transition-shadow h-full">
               <CardHeader>
