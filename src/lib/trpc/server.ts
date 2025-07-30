@@ -1,29 +1,31 @@
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
 import { auth, db } from '@/lib/firebase/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
+import { Headers } from 'next/dist/compiled/edge-runtime';
 
 const t = initTRPC.context<{
     user?: DecodedIdToken;
+    headers?: Headers;
 }>().create();
 
 const middleware = t.middleware;
 
 const isAuthenticated = middleware(async (opts) => {
-  const cookiesStore = cookies();
-  const session = cookiesStore.get('__session')?.value || '';
+  const { ctx } = opts;
+  const sessionCookie = ctx.headers?.get('cookie')?.split('__session=')[1] || '';
 
-  if (!session) {
+  if (!sessionCookie) {
     throw new Error('Unauthorized: No session cookie found.');
   }
 
   try {
-    const decodedClaims = await auth.verifySessionCookie(session, true);
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
     return opts.next({
       ctx: {
+        ...ctx,
         user: decodedClaims,
       },
     });
@@ -61,6 +63,7 @@ const UserUpdateSchema = UserSchema.partial();
 
 const userRouter = router({
   getUser: privateProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("User not authenticated");
     const userRef = db.collection('users').doc(ctx.user.uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
@@ -78,11 +81,13 @@ const userRouter = router({
   updateUser: privateProcedure
     .input(UserUpdateSchema)
     .mutation(async ({ ctx, input }) => {
+       if (!ctx.user) throw new Error("User not authenticated");
       const userRef = db.collection('users').doc(ctx.user.uid);
       await userRef.set({ ...input, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       return { success: true };
     }),
   deleteUser: privateProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("User not authenticated");
     await db.collection('users').doc(ctx.user.uid).delete();
     await auth.deleteUser(ctx.user.uid);
     // Note: Deleting characters and other user data might be needed here
@@ -91,6 +96,7 @@ const userRouter = router({
   installDataPack: privateProcedure
     .input(z.object({ packId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
       const userRef = db.collection('users').doc(ctx.user.uid);
       await userRef.update({
         installedPacks: FieldValue.arrayUnion(input.packId),
@@ -103,6 +109,7 @@ const userRouter = router({
        if (input.packId === 'core_base_styles') {
         throw new Error('Cannot uninstall core system pack.');
        }
+      if (!ctx.user) throw new Error("User not authenticated");
       const userRef = db.collection('users').doc(ctx.user.uid);
       await userRef.update({
         installedPacks: FieldValue.arrayRemove(input.packId),
@@ -224,6 +231,7 @@ const characterRouter = router({
   createCharacter: privateProcedure
     .input(CreateCharacterInputSchema)
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
       const characterData = {
         ...input,
         userId: ctx.user.uid,
@@ -249,6 +257,7 @@ const characterRouter = router({
   
   listUserCharacters: privateProcedure
     .query(async ({ ctx }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
       const snapshot = await db.collection('characters').where('userId', '==', ctx.user.uid).orderBy('createdAt', 'desc').get();
       return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
     }),
@@ -273,6 +282,7 @@ const characterRouter = router({
   updateCharacter: privateProcedure
     .input(UpdateCharacterInputSchema)
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
       const { id, ...dataToUpdate } = input;
       const characterRef = db.collection('characters').doc(id);
       const characterDoc = await characterRef.get();
@@ -294,6 +304,7 @@ const characterRouter = router({
   deleteCharacter: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
       const characterRef = db.collection('characters').doc(input.id);
       const characterDoc = await characterRef.get();
 
@@ -311,6 +322,7 @@ const characterRouter = router({
   likeCharacter: privateProcedure
     .input(z.object({ characterId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
       const characterRef = db.collection('characters').doc(input.characterId);
       
       await db.runTransaction(async (transaction) => {
@@ -343,6 +355,7 @@ const characterRouter = router({
   unlikeCharacter: privateProcedure
     .input(z.object({ characterId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
       const characterRef = db.collection('characters').doc(input.characterId);
 
        await db.runTransaction(async (transaction) => {
@@ -398,6 +411,7 @@ const collectionRouter = router({
     create: privateProcedure
         .input(CreateCollectionInputSchema)
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.user) throw new Error("User not authenticated");
             const collectionData = {
                 ...input,
                 userId: ctx.user.uid,
@@ -408,6 +422,7 @@ const collectionRouter = router({
             return { id: collectionRef.id, ...collectionData };
         }),
     list: privateProcedure.query(async ({ ctx }) => {
+        if (!ctx.user) throw new Error("User not authenticated");
         const snapshot = await db
             .collection('collections')
             .where('userId', '==', ctx.user.uid)
@@ -418,6 +433,7 @@ const collectionRouter = router({
     get: privateProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ ctx, input }) => {
+            if (!ctx.user) throw new Error("User not authenticated");
             const collectionDoc = await db.collection('collections').doc(input.id).get();
             if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
                 throw new Error('Collection not found or access denied.');
@@ -436,6 +452,7 @@ const collectionRouter = router({
     update: privateProcedure
         .input(UpdateCollectionInputSchema)
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.user) throw new Error("User not authenticated");
             const { id, ...dataToUpdate } = input;
             const collectionRef = db.collection('collections').doc(id);
             const collectionDoc = await collectionRef.get();
@@ -452,6 +469,7 @@ const collectionRouter = router({
     delete: privateProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.user) throw new Error("User not authenticated");
             const collectionRef = db.collection('collections').doc(input.id);
             const collectionDoc = await collectionRef.get();
              if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
@@ -464,6 +482,7 @@ const collectionRouter = router({
     addCharacter: privateProcedure
         .input(z.object({ collectionId: z.string(), characterId: z.string() }))
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.user) throw new Error("User not authenticated");
             const collectionRef = db.collection('collections').doc(input.collectionId);
             const collectionDoc = await collectionRef.get();
             if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
@@ -478,6 +497,7 @@ const collectionRouter = router({
     removeCharacter: privateProcedure
         .input(z.object({ collectionId: z.string(), characterId: z.string() }))
         .mutation(async ({ ctx, input }) => {
+             if (!ctx.user) throw new Error("User not authenticated");
              const collectionRef = db.collection('collections').doc(input.collectionId);
             const collectionDoc = await collectionRef.get();
             if (!collectionDoc.exists || collectionDoc.data()?.userId !== ctx.user.uid) {
