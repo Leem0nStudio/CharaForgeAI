@@ -5,22 +5,22 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
 import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+import { headers } from 'next/headers';
 
 // 1. CONTEXT CREATION
-// This function is responsible for creating the context for each request.
-// It now receives the cookies object directly from the request handler.
-export const createContext = async (cookieStore: ReadonlyRequestCookies) => {
-  const sessionCookie = cookieStore.get('__session')?.value;
-
-  if (!sessionCookie) {
+export const createContext = async () => {
+  const authorization = headers().get('Authorization');
+  if (!authorization || !authorization.startsWith('Bearer ')) {
     return { user: null };
   }
+  
+  const idToken = authorization.split('Bearer ')[1];
 
   try {
-    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+    const decodedClaims = await auth.verifyIdToken(idToken);
     return { user: decodedClaims };
   } catch (error) {
-    // Session cookie is invalid or expired.
+    // Token is invalid or expired.
     return { user: null };
   }
 };
@@ -32,8 +32,6 @@ const t = initTRPC.context<Context>().create();
 const middleware = t.middleware;
 
 // 2. MIDDLEWARE
-// The middleware now just checks if the user object exists in the context.
-// It no longer needs to read cookies itself.
 const isAuthenticated = middleware(({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: 'UNAUTHORIZED' });

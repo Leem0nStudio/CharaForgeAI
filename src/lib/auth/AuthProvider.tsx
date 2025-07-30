@@ -6,9 +6,12 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   User,
+  getIdToken,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { auth, db } from "@/lib/firebase/client"; // db is not used, can be removed
 import { useRouter } from "next/navigation";
+import { trpcClient } from "@/lib/trpc/client";
+import { FieldValue } from "firebase/firestore"; // Not used here, can be removed
 
 type AuthContextType = {
   user: User | null;
@@ -26,23 +29,30 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-async function manageSessionCookie(idToken: string | null) {
-  if (idToken) {
-    // Create the session
-    await fetch("/api/auth/session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-  } else {
-    // Sign out
-    await fetch("/api/auth/session", {
-      method: "DELETE",
-    });
+async function manageUserInFirestore(user: User | null) {
+  if (user) {
+    const userRef = (await import('firebase/firestore')).doc(db, "users", user.uid);
+    const userDoc = await (await import('firebase/firestore')).getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      console.log("[AuthProvider] User not found in Firestore, creating...");
+      await (await import('firebase/firestore')).setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        purchasedPacks: [],
+        installedPacks: ["core_base_styles"],
+        subscriptionTier: "free",
+        totalLikes: 0,
+        createdAt: (await import('firebase/firestore')).serverTimestamp(),
+        updatedAt: (await import('firebase/firestore')).serverTimestamp(),
+      });
+      console.log("[AuthProvider] User created in Firestore");
+    }
   }
 }
+
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -54,15 +64,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (userState) => {
       setLoading(true);
       if (userState) {
-        const idTokenResult = await userState.getIdTokenResult();
         setUser(userState);
+        const idTokenResult = await userState.getIdTokenResult();
         setIsAdmin(!!idTokenResult.claims.admin);
-        await manageSessionCookie(idTokenResult.token);
+        await manageUserInFirestore(userState);
       } else {
         setUser(null);
         setIsAdmin(false);
-        await manageSessionCookie(null);
       }
+      // Invalidate tRPC cache on auth state change
+      await trpcClient.invalidate();
       router.refresh();
       setLoading(false);
     });
