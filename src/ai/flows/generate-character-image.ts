@@ -3,7 +3,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {db} from '@/lib/firebase/server';
 
 const GenerateCharacterImageInputSchema = z.object({
   userId: z.string().describe('The ID of the user requesting the generation.'),
@@ -47,14 +46,7 @@ const generateCharacterImageFlow = ai.defineFlow(
     outputSchema: GenerateCharacterImageOutputSchema,
   },
   async input => {
-    const {userId, datapackId, name, bio, baseImage, useHighQuality} = input;
-
-    // The user must exist, but we don't need to validate the datapack for now.
-    const userRef = db.collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-      throw new Error('User not found.');
-    }
+    const {name, bio, baseImage, useHighQuality} = input;
 
     const imagePrompt = `A high-quality, detailed fantasy digital painting of a character named ${name}.
 

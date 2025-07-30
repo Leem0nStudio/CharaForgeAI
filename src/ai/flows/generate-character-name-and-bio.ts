@@ -9,7 +9,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { db } from '@/lib/firebase/server';
 
 const GenerateCharacterNameAndBioInputSchema = z.object({
   userId: z.string().describe("The ID of the user requesting the generation."),
@@ -31,7 +30,7 @@ export async function generateCharacterNameAndBio(input: GenerateCharacterNameAn
 const generateCharacterNameAndBioPrompt = ai.definePrompt({
   name: 'generateCharacterNameAndBioPrompt',
   model: 'googleai/gemini-1.5-flash-latest',
-  input: {schema: GenerateCharacterNameAndBioInputSchema},
+  input: {schema: z.object({ userPreferences: z.string() })},
   output: {schema: GenerateCharacterNameAndBioOutputSchema},
   prompt: `You are a creative writer specializing in character development.
 
@@ -50,16 +49,8 @@ const generateCharacterNameAndBioFlow = ai.defineFlow(
     outputSchema: GenerateCharacterNameAndBioOutputSchema,
   },
   async input => {
-    const { userId, datapackId, userPreferences } = input;
-
-    // The user must exist, but we don't need to validate the datapack for now.
-    const userRef = db.collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-      throw new Error('User not found.');
-    }
-
-    const {output} = await generateCharacterNameAndBioPrompt({ userPreferences, userId, datapackId });
+    const { userPreferences } = input;
+    const {output} = await generateCharacterNameAndBioPrompt({ userPreferences });
     return output!;
   }
 );
