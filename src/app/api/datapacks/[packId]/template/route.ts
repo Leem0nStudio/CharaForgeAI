@@ -39,7 +39,7 @@ export async function GET(
 
     // 3. Fetch the YAML template from Firebase Storage
     const bucket = getStorage().bucket(); // Assumes default bucket
-    const filePath = `DataPacks/${packId}/prompt_template.yaml`;
+    const filePath = `datapacks/${packId}/prompt_template.yaml`;
     const file = bucket.file(filePath);
 
     const [exists] = await file.exists();

@@ -249,7 +249,7 @@ const dataPackRouter = router({
 
         if (promptTemplateContent && promptTemplateContent.trim() !== '') {
             const bucket = getStorage().bucket();
-            const filePath = `DataPacks/${packId}/prompt_template.yaml`;
+            const filePath = `datapacks/${packId}/prompt_template.yaml`;
             const file = bucket.file(filePath);
 
             await file.save(promptTemplateContent, {
