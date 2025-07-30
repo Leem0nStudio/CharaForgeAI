@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Download, Trash2, Package } from "lucide-react";
+import { CheckCircle, Download, Trash2, Package, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export function DataPackStore() {
@@ -30,7 +30,6 @@ export function DataPackStore() {
   const installMutation = trpc.user.installDataPack.useMutation({
     onSuccess: (_, variables) => {
       utils.user.getUser.invalidate();
-      utils.datapack.getByIds.invalidate();
       toast({
         title: "Pack Installed",
         description: "The DataPack has been added to your library.",
@@ -48,7 +47,6 @@ export function DataPackStore() {
   const uninstallMutation = trpc.user.uninstallDataPack.useMutation({
     onSuccess: () => {
       utils.user.getUser.invalidate();
-      utils.datapack.getByIds.invalidate();
       toast({
         title: "Pack Uninstalled",
         description: "The DataPack has been removed from your library.",
@@ -79,9 +77,7 @@ export function DataPackStore() {
     uninstallMutation.mutate({ packId });
   };
 
-  const isLoading = installMutation.isPending || uninstallMutation.isPending;
-
-  if (isLoadingPacks) {
+  if (isLoadingPacks || (user && isLoadingUser)) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -119,8 +115,10 @@ export function DataPackStore() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {packs?.map((pack) => {
         const isInstalled = !!user && !!userData?.installedPacks.includes(pack.id);
-        const isUninstalling = uninstallMutation.isPending && uninstallMutation.variables?.packId === pack.id;
-        const isInstalling = installMutation.isPending && installMutation.variables?.packId === pack.id;
+        const isMutating = installMutation.isPending || uninstallMutation.isPending;
+
+        const isCurrentActionInstall = installMutation.isPending && installMutation.variables?.packId === pack.id;
+        const isCurrentActionUninstall = uninstallMutation.isPending && uninstallMutation.variables?.packId === pack.id;
 
 
         return (
@@ -135,10 +133,10 @@ export function DataPackStore() {
                   variant="secondary"
                   className="w-full"
                   onClick={() => handleUninstall(pack.id)}
-                  disabled={isLoading || pack.id === 'core_base_styles'}
+                  disabled={isMutating || pack.id === 'core_base_styles'}
                 >
-                  {isUninstalling ? (
-                    'Uninstalling...'
+                  {isCurrentActionUninstall ? (
+                    <Loader2 className="animate-spin" />
                   ) : (
                     <>
                       <CheckCircle className="mr-2" />
@@ -150,10 +148,10 @@ export function DataPackStore() {
                 <Button
                   className="w-full"
                   onClick={() => handleInstall(pack.id)}
-                  disabled={isLoading || authLoading}
+                  disabled={isMutating || authLoading}
                 >
-                   {isInstalling ? (
-                    'Installing...'
+                   {isCurrentActionInstall ? (
+                    <Loader2 className="animate-spin" />
                   ) : (
                     <>
                      <Download className="mr-2" />
