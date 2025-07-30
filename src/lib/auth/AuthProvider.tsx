@@ -33,7 +33,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (userState) => {
@@ -50,12 +49,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Invalidate the entire tRPC cache on auth state change.
       // This is the key to ensuring all components get fresh data after login/logout.
       await queryClient.invalidateQueries();
-      router.refresh();
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
