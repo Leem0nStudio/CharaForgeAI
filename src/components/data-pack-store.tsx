@@ -1,3 +1,4 @@
+
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
@@ -118,6 +119,10 @@ export function DataPackStore() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {packs?.map((pack) => {
         const isInstalled = !!user && !!userData?.installedPacks.includes(pack.id);
+        const isUninstalling = uninstallMutation.isPending && uninstallMutation.variables?.packId === pack.id;
+        const isInstalling = installMutation.isPending && installMutation.variables?.packId === pack.id;
+
+
         return (
           <Card key={pack.id} className="flex flex-col">
             <CardHeader className="flex-grow">
@@ -133,7 +138,7 @@ export function DataPackStore() {
                   disabled={isLoading || pack.id === 'core_base_styles'}
                 >
                   <CheckCircle className="mr-2" />
-                  Installed
+                  {isUninstalling ? 'Uninstalling...' : 'Installed'}
                 </Button>
               ) : (
                 <Button
@@ -142,7 +147,7 @@ export function DataPackStore() {
                   disabled={isLoading || authLoading}
                 >
                   <Download className="mr-2" />
-                  Install
+                  {isInstalling ? 'Installing...' : 'Install'}
                 </Button>
               )}
             </CardContent>
