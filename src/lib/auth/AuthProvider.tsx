@@ -50,26 +50,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const handleAuthChange = useCallback(async (userState: User | null) => {
-    setLoading(true);
-    setUser(userState);
-    if (userState) {
-      const idTokenResult = await userState.getIdTokenResult();
-      setIsAdmin(!!idTokenResult.claims.admin);
-      await manageSessionCookie(idTokenResult.token);
-    } else {
-      setIsAdmin(false);
-      await manageSessionCookie(null);
-    }
-    // Refresh the router to ensure server components re-render with the new auth state
-    router.refresh(); 
-    setLoading(false);
-  }, [router]);
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, handleAuthChange);
+    const unsubscribe = onAuthStateChanged(auth, async (userState) => {
+      setLoading(true);
+      if (userState) {
+        const idTokenResult = await userState.getIdTokenResult();
+        setUser(userState);
+        setIsAdmin(!!idTokenResult.claims.admin);
+        await manageSessionCookie(idTokenResult.token);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+        await manageSessionCookie(null);
+      }
+      router.refresh();
+      setLoading(false);
+    });
+
     return () => unsubscribe();
-  }, [handleAuthChange]);
+  }, [router]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
