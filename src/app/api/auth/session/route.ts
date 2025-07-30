@@ -1,6 +1,7 @@
 import { auth, db } from "@/lib/firebase/server";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get("Authorization");
@@ -31,9 +32,13 @@ export async function POST(request: NextRequest) {
         await userRef.set({
           uid: decodedToken.uid,
           email: decodedToken.email,
+          displayName: decodedToken.name,
+          photoURL: decodedToken.picture,
           purchasedPacks: [],
           installedPacks: ["core_base_styles"],
           subscriptionTier: "free",
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         });
       }
     }

@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, Package } from "lucide-react";
 import Link from "next/link";
 import {
     Dialog,
@@ -83,34 +83,44 @@ export default function AdminDataPacksPage() {
                         </DialogContent>
                     </Dialog>
                 </div>
-                <div className="border rounded-lg">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Created At</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {packs?.map(pack => (
-                                <TableRow key={pack.id}>
-                                    <TableCell className="font-medium">{pack.name}</TableCell>
-                                    <TableCell className="text-muted-foreground">{pack.description}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
-                                            {pack.premiumStatus}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
-                                    </TableCell>
+                {packs && packs.length > 0 ? (
+                    <div className="border rounded-lg">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Created At</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
+                            </TableHeader>
+                            <TableBody>
+                                {packs?.map(pack => (
+                                    <TableRow key={pack.id}>
+                                        <TableCell className="font-medium">{pack.name}</TableCell>
+                                        <TableCell className="text-muted-foreground">{pack.description}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
+                                                {pack.premiumStatus}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                ) : (
+                    <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                        <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-xl font-semibold">No DataPacks Found</h3>
+                        <p className="text-muted-foreground mt-2">
+                            Click "Create New DataPack" to get started.
+                        </p>
+                    </div>
+                )}
             </>
         )
     }
