@@ -154,6 +154,7 @@ const DataPackSchema = z.object({
     type: z.string(),
     reference: z.string(),
   })),
+  promptTemplate: z.string().optional(), // e.g., "gs://bucket-name/DataPacks/pack_id/prompt_template.yaml"
   createdAt: z.any().optional(), // Make optional for existing docs
 });
 
