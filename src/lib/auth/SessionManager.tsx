@@ -1,45 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { onIdTokenChanged, User } from "firebase/auth";
+import { useEffect } from "react";
+import { onIdTokenChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-// This component manages the user's session.
-// It listens for changes in the user's authentication state and updates the session cookie accordingly.
+// This component listens for ID token changes (which happen on sign-in, sign-out, and token refresh)
+// and triggers a server-side re-render by calling router.refresh().
+// This ensures that server components and TRPC routes are always evaluated
+// with the latest authentication state reflected in the session cookie.
 export function SessionManager() {
-  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (newUser) => {
-      const currentUser = user;
-      const newUserState = newUser?.uid || null;
-      const oldUserState = currentUser?.uid || null;
-
-      if (newUserState !== oldUserState) {
-        const idToken = await newUser?.getIdToken();
-        const method = idToken ? "POST" : "DELETE";
-
-        // Call the API to set/remove the session cookie
-        await fetch("/api/auth/session", {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-            ...(idToken && { Authorization: `Bearer ${idToken}` }),
-          },
-        });
-        
-        // This is a client-side navigation that will re-render the layout and page
-        // with the new authentication state.
-        router.refresh();
-      }
-      setUser(newUser);
+    const unsubscribe = onIdTokenChanged(auth, (user) => {
+      // The actual cookie management is now handled in AuthProvider.
+      // Here, we just need to ensure the server is aware of any auth state changes.
+      // router.refresh() forces a refresh of the Server Component tree and re-runs
+      // the TRPC context creation on the server.
+      console.log("Auth state changed, refreshing router...");
+      router.refresh();
     });
 
     return () => unsubscribe();
-  }, [pathname, router, user]);
+  }, [router]);
 
   return null;
 }

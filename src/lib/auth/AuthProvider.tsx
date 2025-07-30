@@ -26,21 +26,41 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
+async function manageSessionCookie(user: User | null) {
+  if (user) {
+    const idToken = await user.getIdToken();
+    await fetch("/api/auth/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+  } else {
+    await fetch("/api/auth/session", {
+      method: "DELETE",
+    });
+  }
+}
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (userState) => {
       setLoading(true);
-      setUser(user);
-      if (user) {
-        const idTokenResult = await user.getIdTokenResult();
+      setUser(userState);
+      
+      if (userState) {
+        const idTokenResult = await userState.getIdTokenResult();
         setIsAdmin(!!idTokenResult.claims.admin);
       } else {
         setIsAdmin(false);
       }
+
+      await manageSessionCookie(userState);
       setLoading(false);
     });
     return () => unsubscribe();
