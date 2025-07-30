@@ -9,8 +9,11 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { db } from '@/lib/firebase/server';
 
 const GenerateCharacterNameAndBioInputSchema = z.object({
+  userId: z.string().describe("The ID of the user requesting the generation."),
+  datapackId: z.string().describe("The ID of the DataPack to use for validation."),
   userPreferences: z.string().describe('The user preferences for the character.'),
 });
 export type GenerateCharacterNameAndBioInput = z.infer<typeof GenerateCharacterNameAndBioInputSchema>;
@@ -46,7 +49,38 @@ const generateCharacterNameAndBioFlow = ai.defineFlow(
     outputSchema: GenerateCharacterNameAndBioOutputSchema,
   },
   async input => {
-    const {output} = await generateCharacterNameAndBioPrompt(input);
+    const { userId, datapackId, userPreferences } = input;
+
+    // DataPack Access Validation
+    const userRef = db.collection('users').doc(userId);
+    const packRef = db.collection('datapacks').doc(datapackId);
+
+    const [userDoc, packDoc] = await Promise.all([userRef.get(), packRef.get()]);
+
+    if (!userDoc.exists) {
+      throw new Error('User not found.');
+    }
+    if (!packDoc.exists) {
+      throw new Error('DataPack not found.');
+    }
+
+    const user = userDoc.data()!;
+    const pack = packDoc.data()!;
+
+    // 1. Check if the pack is installed
+    if (!user.installedPacks?.includes(datapackId)) {
+      throw new Error(`DataPack '${datapackId}' is not installed for this user.`);
+    }
+
+    // 2. Check for permissions
+    if (pack.premiumStatus === 'purchased' && !user.purchasedPacks?.includes(datapackId)) {
+        throw new Error(`User has not purchased DataPack '${datapackId}'.`);
+    }
+    if (pack.premiumStatus === 'subscription' && user.subscriptionTier === 'free') {
+        throw new Error(`User does not have the required subscription tier for DataPack '${datapackId}'.`);
+    }
+
+    const {output} = await generateCharacterNameAndBioPrompt({ userPreferences, userId, datapackId });
     return output!;
   }
 );

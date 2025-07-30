@@ -30,6 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth/AuthProvider";
 
 const formSchema = z.object({
   preferences: z.string().min(20, {
@@ -47,6 +48,7 @@ export function CharacterCreator() {
   const [character, setCharacter] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,15 +58,35 @@ export function CharacterCreator() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be signed in to create a character.",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     setCharacter(null);
 
     try {
       const imagePrompt = `A fantasy portrait of a character described as: ${values.preferences}. High quality, digital painting, intricate details.`;
+      
+      // TODO: Replace with dynamic datapackId from UI selection
+      const datapackId = "core_base_styles";
 
       const [nameAndBioResult, imageResult] = await Promise.all([
-        generateCharacterNameAndBio({ userPreferences: values.preferences }),
-        generateCharacterImage({ prompt: imagePrompt }),
+        generateCharacterNameAndBio({ 
+          userId: user.uid,
+          datapackId: datapackId,
+          userPreferences: values.preferences 
+        }),
+        generateCharacterImage({
+          userId: user.uid,
+          datapackId: datapackId,
+          prompt: imagePrompt
+        }),
       ]);
 
       if (!nameAndBioResult?.name || !nameAndBioResult?.bio) {
@@ -79,12 +101,12 @@ export function CharacterCreator() {
         bio: nameAndBioResult.bio,
         imageUrl: imageResult.imageUrl,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Oh no! Something went wrong.",
-        description:
+        description: error.message ||
           "There was a problem with the AI generation. Please try again.",
       });
     } finally {
@@ -186,4 +208,3 @@ export function CharacterCreator() {
     </div>
   );
 }
-
