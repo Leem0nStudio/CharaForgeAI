@@ -63,11 +63,12 @@ const userRouter = router({
     const userRef = db.collection('users').doc(ctx.user.uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
-      throw new Error('User not found');
+      // This case should ideally not happen if session creation is robust
+      throw new Error('User not found in Firestore');
     }
     
     const data = userDoc.data();
-    // Ensure totalLikes has a default value
+    // Ensure totalLikes has a default value for older documents
     if (data && typeof data.totalLikes === 'undefined') {
         data.totalLikes = 0;
     }
@@ -77,12 +78,13 @@ const userRouter = router({
     .input(UserUpdateSchema)
     .mutation(async ({ ctx, input }) => {
       const userRef = db.collection('users').doc(ctx.user.uid);
-      await userRef.set(input, { merge: true });
+      await userRef.set({ ...input, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       return { success: true };
     }),
   deleteUser: privateProcedure.mutation(async ({ ctx }) => {
     await db.collection('users').doc(ctx.user.uid).delete();
     await auth.deleteUser(ctx.user.uid);
+    // Note: Deleting characters and other user data might be needed here
     return { success: true };
   }),
   installDataPack: privateProcedure
@@ -111,7 +113,6 @@ const userRouter = router({
     .query(async ({ input }) => {
         const limit = input?.limit ?? 10;
         
-        // More efficient query directly on the users collection
         const usersSnapshot = await db
             .collection('users')
             .orderBy('totalLikes', 'desc')
@@ -124,10 +125,11 @@ const userRouter = router({
 
         const creators = usersSnapshot.docs.map(doc => {
             const data = doc.data();
+            // Basic validation for shape
             return {
                 uid: data.uid,
-                displayName: data.displayName,
-                photoURL: data.photoURL,
+                displayName: data.displayName || 'Anonymous',
+                photoURL: data.photoURL || null,
                 totalLikes: data.totalLikes || 0,
             };
         });
@@ -145,8 +147,8 @@ const DataPackSchema = z.object({
     type: z.string(),
     reference: z.string(),
   })).optional(),
-  promptTemplate: z.string().optional(), // e.g., "gs://bucket-name/DataPacks/pack_id/prompt_template.yaml"
-  createdAt: z.any().optional(), // Make optional for existing docs
+  promptTemplate: z.string().optional(),
+  createdAt: z.any().optional(),
 });
 
 const CreateDataPackInputSchema = DataPackSchema.omit({id: true, createdAt: true, promptTemplate: true}).extend({
@@ -157,16 +159,14 @@ const CreateDataPackInputSchema = DataPackSchema.omit({id: true, createdAt: true
 const dataPackRouter = router({
   list: publicProcedure.query(async () => {
     const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
-    const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
-    return packs;
+    return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
   }),
   getNewDataPacks: publicProcedure
     .input(z.object({ limit: z.number().min(1).max(20).optional() }))
     .query(async ({ input }) => {
         const limit = input?.limit ?? 4;
         const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').limit(limit).get();
-        const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
-        return packs;
+        return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
     }),
   create: adminProcedure
     .input(CreateDataPackInputSchema)
@@ -179,15 +179,14 @@ const dataPackRouter = router({
         const filePath = `DataPacks/${packId}/prompt_template.yaml`;
         const file = bucket.file(filePath);
 
-        // Upload the YAML template to Storage
         await file.save(promptTemplateContent, {
             contentType: 'text/yaml',
+            gzip: true,
         });
         
-        // Create the DataPack document in Firestore
         await packRef.set({
             ...packData,
-            content: [], // Default to empty array for now
+            content: [],
             promptTemplate: `gs://${bucket.name}/${filePath}`,
             createdAt: FieldValue.serverTimestamp(),
         });
@@ -196,8 +195,7 @@ const dataPackRouter = router({
     }),
     listAll: adminProcedure.query(async () => {
       const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
-      const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
-      return packs;
+      return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
     }),
 });
 
@@ -232,6 +230,7 @@ const characterRouter = router({
         likedBy: [],
         publicStatus: input.publicStatus ?? false,
         createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       };
       const characterRef = await db.collection('characters').add(characterData);
       return { id: characterRef.id, ...characterData };
@@ -264,10 +263,9 @@ const characterRouter = router({
     .query(async ({ input }) => {
         const limit = input?.limit ?? 8;
         const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(limit).get();
-        // Filter out characters that might have missing image URLs
         const characters = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(char => char.imageUrl);
+          .filter(char => char.imageUrl); // Ensure imageUrl exists
         return characters.map(char => CharacterSchema.parse(char));
     }),
 
@@ -321,18 +319,15 @@ const characterRouter = router({
         }
 
         const charData = charDoc.data();
-        const likedBy = charData?.likedBy || [];
-        if (likedBy.includes(ctx.user.uid)) {
+        if (charData?.likedBy?.includes(ctx.user.uid)) {
           return; // User has already liked this
         }
         
-        // Update character
         transaction.update(characterRef, {
           likes: FieldValue.increment(1),
           likedBy: FieldValue.arrayUnion(ctx.user.uid),
         });
 
-        // Update user's totalLikes
         if (charData.userId) {
             const userRef = db.collection('users').doc(charData.userId);
             transaction.update(userRef, {
@@ -356,18 +351,15 @@ const characterRouter = router({
         }
         
         const charData = charDoc.data();
-        const likedBy = charData?.likedBy || [];
-        if (!likedBy.includes(ctx.user.uid)) {
+        if (!charData?.likedBy?.includes(ctx.user.uid)) {
           return; // User hasn't liked this, nothing to do
         }
         
-        // Update character
         transaction.update(characterRef, {
           likes: FieldValue.increment(-1),
           likedBy: FieldValue.arrayRemove(ctx.user.uid),
         });
 
-        // Update user's totalLikes
         if (charData.userId) {
             const userRef = db.collection('users').doc(charData.userId);
              transaction.update(userRef, {
@@ -431,7 +423,6 @@ const collectionRouter = router({
             }
             const collectionData = CollectionSchema.parse({ id: collectionDoc.id, ...collectionDoc.data() });
 
-            // Fetch characters in the collection
             if (collectionData.characterIds.length === 0) {
                 return { ...collectionData, characters: [] };
             }
@@ -501,7 +492,7 @@ const collectionRouter = router({
 const adminRouter = router({
     getStats: adminProcedure.query(async () => {
         const usersPromise = auth.listUsers();
-        const charactersPromise = db.collection('characters').get();
+        const charactersPromise = db.collection('characters').count().get();
 
         const [listUsersResult, charactersSnapshot] = await Promise.all([
             usersPromise,
@@ -509,7 +500,7 @@ const adminRouter = router({
         ]);
 
         const totalUsers = listUsersResult.users.length;
-        const totalCharacters = charactersSnapshot.size;
+        const totalCharacters = charactersSnapshot.data().count;
 
         return { totalUsers, totalCharacters };
     }),
@@ -524,3 +515,5 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+    
