@@ -45,6 +45,37 @@ const isAuthenticated = middleware(({ ctx, next }) => {
   });
 });
 
+const ensureUserExists = middleware(async ({ ctx, next }) => {
+    const user = ctx.user!;
+    const userRef = db.collection('users').doc(user.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+        console.log(`User document not found for uid: ${user.uid}. Creating...`);
+        await userRef.set({
+            uid: user.uid,
+            email: user.email || null,
+            displayName: user.displayName || null,
+            photoURL: user.photoURL || null,
+            purchasedPacks: [],
+            installedPacks: ["core_base_styles"],
+            subscriptionTier: "free",
+            totalLikes: 0,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+        });
+        console.log(`User document created for uid: ${user.uid}`);
+    }
+
+    return next({
+        ctx: {
+            ...ctx,
+            user: user,
+        },
+    });
+});
+
+
 const isAdmin = middleware(({ ctx, next }) => {
     if (!ctx.user || !ctx.user.admin) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'User is not an admin.' });
@@ -59,8 +90,8 @@ const isAdmin = middleware(({ ctx, next }) => {
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
-export const privateProcedure = t.procedure.use(isAuthenticated);
-export const adminProcedure = t.procedure.use(isAuthenticated).use(isAdmin);
+export const privateProcedure = t.procedure.use(isAuthenticated).use(ensureUserExists);
+export const adminProcedure = t.procedure.use(isAuthenticated).use(ensureUserExists).use(isAdmin);
 
 const UserSchema = z.object({
   uid: z.string(),

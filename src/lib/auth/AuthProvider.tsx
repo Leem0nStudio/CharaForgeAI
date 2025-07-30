@@ -29,31 +29,6 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-async function manageUserInFirestore(user: User | null) {
-  if (user) {
-    const userRef = (await import('firebase/firestore')).doc(db, "users", user.uid);
-    const userDoc = await (await import('firebase/firestore')).getDoc(userRef);
-
-    if (!userDoc.exists()) {
-      console.log("[AuthProvider] User not found in Firestore, creating...");
-      await (await import('firebase/firestore')).setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        purchasedPacks: [],
-        installedPacks: ["core_base_styles"],
-        subscriptionTier: "free",
-        totalLikes: 0,
-        createdAt: (await import('firebase/firestore')).serverTimestamp(),
-        updatedAt: (await import('firebase/firestore')).serverTimestamp(),
-      });
-      console.log("[AuthProvider] User created in Firestore");
-    }
-  }
-}
-
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -67,14 +42,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(userState);
         const idTokenResult = await userState.getIdTokenResult();
         setIsAdmin(!!idTokenResult.claims.admin);
-        await manageUserInFirestore(userState);
       } else {
         setUser(null);
         setIsAdmin(false);
       }
       
       // Invalidate the entire tRPC cache on auth state change.
-      // This is the key to ensuring all components get fresh data after login.
+      // This is the key to ensuring all components get fresh data after login/logout.
       await queryClient.invalidateQueries();
       router.refresh();
       setLoading(false);
