@@ -10,13 +10,14 @@ const GenerateCharacterImageInputSchema = z.object({
   datapackId: z
     .string()
     .describe('The ID of the DataPack to use for validation.'),
+  name: z.string().describe('The name of the character.'),
+  bio: z.string().describe('The biography of the character.'),
   baseImage: z
     .string()
     .optional()
     .describe(
-      "Optional base image as a data URI for image editing. Must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'" // Correct the typo here
+      "Optional base image as a data URI for image editing. Must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'"
     ),
-  prompt: z.string().describe('Text prompt for generating the character image.'),
   useHighQuality: z
     .boolean()
     .default(false)
@@ -46,7 +47,7 @@ const generateCharacterImageFlow = ai.defineFlow(
     outputSchema: GenerateCharacterImageOutputSchema,
   },
   async input => {
-    const {userId, datapackId, baseImage, prompt, useHighQuality} = input;
+    const {userId, datapackId, name, bio, baseImage, useHighQuality} = input;
 
     // The user must exist, but we don't need to validate the datapack for now.
     const userRef = db.collection('users').doc(userId);
@@ -54,6 +55,13 @@ const generateCharacterImageFlow = ai.defineFlow(
     if (!userDoc.exists) {
       throw new Error('User not found.');
     }
+
+    const imagePrompt = `A high-quality, detailed fantasy digital painting of a character named ${name}.
+
+**Character Biography:**
+${bio}
+
+Create a portrait that captures the essence of this character. Pay attention to details mentioned in the biography, such as their mood, clothing, and any specific physical features. The image should be in a style suitable for a fantasy genre, with good lighting and intricate details.`;
 
     let imageUrl: string;
 
@@ -63,7 +71,7 @@ const generateCharacterImageFlow = ai.defineFlow(
         model: 'googleai/gemini-2.0-flash-preview-image-generation',
         prompt: [
           {media: {url: baseImage}},
-          {text: prompt},
+          {text: imagePrompt},
         ],
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
@@ -81,7 +89,7 @@ const generateCharacterImageFlow = ai.defineFlow(
 
       const {media} = await ai.generate({
         model: model,
-        prompt: prompt,
+        prompt: imagePrompt,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
         },

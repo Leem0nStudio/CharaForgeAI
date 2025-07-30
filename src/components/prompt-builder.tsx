@@ -33,7 +33,7 @@ import { Textarea } from "./ui/textarea";
 
 interface PromptBuilderProps {
   schema: ParsedPromptTemplate;
-  onSubmit: (result: { prompt: string; negativePrompt: string }) => void;
+  onSubmit: (result: { prompt: string }) => void;
   isLoading?: boolean;
 }
 
@@ -69,7 +69,6 @@ export function PromptBuilder({ schema, onSubmit, isLoading = false }: PromptBui
   function onFormSubmit() {
     onSubmit({
       prompt: finalPrompt,
-      negativePrompt: schema.negativePrompt,
     });
   }
   
@@ -158,5 +157,3 @@ export function PromptBuilder({ schema, onSubmit, isLoading = false }: PromptBui
     </Form>
   );
 }
-
-    

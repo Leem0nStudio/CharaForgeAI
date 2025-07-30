@@ -134,24 +134,25 @@ export function CharacterCreator() {
     setCharacter(null);
 
     try {
-      const imagePrompt = promptBuilderResult?.prompt || `A fantasy portrait of a character described as: ${basePreferences}. High quality, digital painting, intricate details.`;
-
-      const [nameAndBioResult, imageResult] = await Promise.all([
-        generateCharacterNameAndBio({
-          userId: user.uid,
-          datapackId: selectedPack.id,
-          userPreferences: basePreferences,
-        }),
-        generateCharacterImage({
-          userId: user.uid,
-          datapackId: selectedPack.id,
-          prompt: imagePrompt,
-        }),
-      ]);
+      // Step 1: Generate Name and Bio
+      const nameAndBioResult = await generateCharacterNameAndBio({
+        userId: user.uid,
+        datapackId: selectedPack.id,
+        userPreferences: basePreferences,
+      });
 
       if (!nameAndBioResult?.name || !nameAndBioResult?.bio) {
         throw new Error("Failed to generate character name or biography.");
       }
+      
+      // Step 2: Generate Image using the new name and bio
+      const imageResult = await generateCharacterImage({
+        userId: user.uid,
+        datapackId: selectedPack.id,
+        name: nameAndBioResult.name,
+        bio: nameAndBioResult.bio,
+      });
+
       if (!imageResult?.imageUrl) {
         throw new Error("Failed to generate character image.");
       }
@@ -163,6 +164,8 @@ export function CharacterCreator() {
       };
 
       setCharacter(newCharacter);
+      
+      // Step 3: Save the final character to the vault
       createCharacterMutation.mutate({
         ...newCharacter,
         associatedDataPacks: [selectedPack.id],
@@ -232,7 +235,7 @@ export function CharacterCreator() {
                  <PromptBuilder
                     key={selectedPack?.id}
                     schema={promptTemplate}
-                    onSubmit={(result) => handleGeneration(form.getValues('preferences'), result)}
+                    onSubmit={(result) => handleGeneration(result.prompt)}
                     isLoading={isLoading || createCharacterMutation.isPending}
                 />
             )}
@@ -323,5 +326,3 @@ export function CharacterCreator() {
     </div>
   );
 }
-
-    
