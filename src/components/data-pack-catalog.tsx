@@ -19,14 +19,13 @@ export function DataPackCatalog() {
   const utils = trpc.useUtils();
 
   const { data: packs, isLoading: isLoadingPacks, error: packsError } =
-    trpc.datapack.list.useQuery();
+    trpc.datapack.listAll.useQuery();
   
   const { data: user, isLoading: isLoadingUser } = trpc.user.getUser.useQuery();
 
   const installMutation = trpc.user.installDataPack.useMutation({
     onSuccess: () => {
       utils.user.getUser.invalidate();
-      utils.datapack.getByIds.invalidate();
       toast({
         title: "Pack Installed",
         description: "The DataPack has been added to your library.",
@@ -44,7 +43,6 @@ export function DataPackCatalog() {
   const uninstallMutation = trpc.user.uninstallDataPack.useMutation({
     onSuccess: () => {
       utils.user.getUser.invalidate();
-      utils.datapack.getByIds.invalidate();
       toast({
         title: "Pack Uninstalled",
         description: "The DataPack has been removed from your library.",
