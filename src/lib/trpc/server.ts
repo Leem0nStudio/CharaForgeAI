@@ -3,8 +3,11 @@ import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { auth, db } from '@/lib/firebase/server';
 import { FieldValue } from 'firebase-admin/firestore';
+import { DecodedIdToken } from 'firebase-admin/auth';
 
-const t = initTRPC.create();
+const t = initTRPC.context<{
+    user?: DecodedIdToken;
+}>().create();
 
 const middleware = t.middleware;
 
@@ -12,7 +15,7 @@ const isAuthenticated = middleware(async (opts) => {
   const session = cookies().get('__session')?.value || '';
 
   if (!session) {
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized: No session cookie found.');
   }
 
   try {
@@ -23,13 +26,23 @@ const isAuthenticated = middleware(async (opts) => {
       },
     });
   } catch (error) {
-    throw new Error('Unauthorized');
+    console.error("Authentication error:", error);
+    throw new Error('Unauthorized: Invalid session cookie.');
   }
+});
+
+const isAdmin = middleware(async (opts) => {
+    const { ctx } = opts;
+    if (!ctx.user || !ctx.user.admin) {
+        throw new Error('Forbidden: User is not an admin.');
+    }
+    return opts.next(opts);
 });
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const privateProcedure = t.procedure.use(isAuthenticated);
+export const adminProcedure = privateProcedure.use(isAdmin);
 
 const UserSchema = z.object({
   uid: z.string(),
@@ -365,6 +378,22 @@ const collectionRouter = router({
         }),
 });
 
+const adminRouter = router({
+    getStats: adminProcedure.query(async () => {
+        const usersPromise = auth.listUsers();
+        const charactersPromise = db.collection('characters').get();
+
+        const [listUsersResult, charactersSnapshot] = await Promise.all([
+            usersPromise,
+            charactersPromise,
+        ]);
+
+        const totalUsers = listUsersResult.users.length;
+        const totalCharacters = charactersSnapshot.size;
+
+        return { totalUsers, totalCharacters };
+    }),
+});
 
 export const appRouter = router({
   greeting: publicProcedure
@@ -378,6 +407,7 @@ export const appRouter = router({
   datapack: dataPackRouter,
   character: characterRouter,
   collection: collectionRouter,
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;

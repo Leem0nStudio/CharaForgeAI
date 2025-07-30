@@ -12,6 +12,7 @@ import { SessionManager } from "@/lib/auth/SessionManager";
 
 type AuthContextType = {
   user: User | null;
+  isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -19,6 +20,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  isAdmin: false,
   signInWithGoogle: async () => {},
   signOut: async () => {},
   loading: true,
@@ -26,11 +28,18 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      if (user) {
+        const idTokenResult = await user.getIdTokenResult();
+        setIsAdmin(!!idTokenResult.claims.admin);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -54,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, signInWithGoogle, signOut, loading }}>
+    <AuthContext.Provider value={{ user, isAdmin, signInWithGoogle, signOut, loading }}>
       <SessionManager />
       {children}
     </AuthContext.Provider>

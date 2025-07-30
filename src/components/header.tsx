@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, LogIn, LogOut, ShieldCheck, Search, Sprout } from "lucide-react";
+import { Moon, Sun, LogIn, LogOut, ShieldCheck, Search, Sprout, UserCog } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
   const { setTheme } = useTheme();
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, isAdmin, signInWithGoogle, signOut } = useAuth();
 
   return (
     <header className="py-6 px-4 md:px-8 border-b shadow-sm flex justify-between items-center">
@@ -71,6 +71,17 @@ export function Header() {
                   <span>Collections</span>
                 </Link>
               </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin">
+                      <UserCog className="mr-2 h-4 w-4" />
+                      <span>Admin</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={signOut}>
                 <LogOut className="mr-2 h-4 w-4" />
