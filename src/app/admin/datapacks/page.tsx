@@ -1,0 +1,130 @@
+
+"use client";
+
+import { useState } from "react";
+import { Header } from "@/components/header";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { trpc } from "@/lib/trpc/client";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { PlusCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { CreateDataPackWizard } from "@/components/create-datapack-wizard";
+
+export default function AdminDataPacksPage() {
+    const { user, loading: authLoading, isAdmin } = useAuth();
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    
+    const { data: packs, isLoading: packsLoading, error } = trpc.datapack.listAll.useQuery(undefined, {
+        enabled: !!user && isAdmin,
+    });
+    
+    const utils = trpc.useUtils();
+
+    const onWizardFinished = () => {
+        setIsCreateOpen(false);
+        utils.datapack.listAll.invalidate();
+    }
+
+    const renderContent = () => {
+        if (authLoading || packsLoading) {
+            return (
+                <div className="flex justify-center items-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            );
+        }
+
+        if (!user || !isAdmin) {
+             return (
+                <div className="text-center py-16">
+                    <h2 className="text-2xl font-bold">Access Denied</h2>
+                    <p className="text-muted-foreground mt-2">
+                        You must be an administrator to view this page.
+                    </p>
+                </div>
+            );
+        }
+
+        if (error) {
+            return <p className="text-destructive">Error loading DataPacks: {error.message}</p>
+        }
+        
+        return (
+            <>
+                <div className="flex justify-end mb-4">
+                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                        <DialogTrigger asChild>
+                             <Button>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Create New DataPack
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                            <DialogHeader>
+                                <DialogTitle>DataPack Creation Wizard</DialogTitle>
+                            </DialogHeader>
+                            <CreateDataPackWizard onFinished={onWizardFinished} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
+                <div className="border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Created At</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {packs?.map(pack => (
+                                <TableRow key={pack.id}>
+                                    <TableCell className="font-medium">{pack.name}</TableCell>
+                                    <TableCell className="text-muted-foreground">{pack.description}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
+                                            {pack.premiumStatus}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </>
+        )
+    }
+
+    return (
+        <div className="min-h-screen bg-background text-foreground">
+            <Header />
+            <main className="p-4 md:p-8">
+                 <div className="mb-8 text-center">
+                    <h2 className="text-3xl font-bold font-headline">Manage DataPacks</h2>
+                    <p className="text-muted-foreground">Create, view, and manage character DataPacks.</p>
+                </div>
+                {renderContent()}
+            </main>
+        </div>
+    );
+}

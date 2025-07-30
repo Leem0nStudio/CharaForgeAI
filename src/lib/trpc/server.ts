@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { auth, db } from '@/lib/firebase/server';
 import { FieldValue } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { DecodedIdToken } from 'firebase-admin/auth';
 
 const t = initTRPC.context<{
@@ -153,10 +154,15 @@ const DataPackSchema = z.object({
   content: z.array(z.object({
     type: z.string(),
     reference: z.string(),
-  })),
+  })).optional(),
   promptTemplate: z.string().optional(), // e.g., "gs://bucket-name/DataPacks/pack_id/prompt_template.yaml"
   createdAt: z.any().optional(), // Make optional for existing docs
 });
+
+const CreateDataPackInputSchema = DataPackSchema.omit({id: true, createdAt: true, promptTemplate: true}).extend({
+    promptTemplateContent: z.string()
+});
+
 
 const dataPackRouter = router({
   list: publicProcedure.query(async () => {
@@ -171,6 +177,37 @@ const dataPackRouter = router({
         const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').limit(limit).get();
         const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
         return packs;
+    }),
+  create: adminProcedure
+    .input(CreateDataPackInputSchema)
+    .mutation(async ({ input }) => {
+        const { promptTemplateContent, ...packData } = input;
+        
+        const packRef = db.collection('datapacks').doc();
+        const packId = packRef.id;
+        const bucket = getStorage().bucket();
+        const filePath = `DataPacks/${packId}/prompt_template.yaml`;
+        const file = bucket.file(filePath);
+
+        // Upload the YAML template to Storage
+        await file.save(promptTemplateContent, {
+            contentType: 'text/yaml',
+        });
+        
+        // Create the DataPack document in Firestore
+        await packRef.set({
+            ...packData,
+            content: [], // Default to empty array for now
+            promptTemplate: `gs://${bucket.name}/${filePath}`,
+            createdAt: FieldValue.serverTimestamp(),
+        });
+        
+        return { success: true, id: packId };
+    }),
+    listAll: adminProcedure.query(async () => {
+      const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
+      const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
+      return packs;
     }),
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, LogIn, LogOut, ShieldCheck, Search, Sprout, UserCog, Library, SquarePen } from "lucide-react";
+import { Moon, Sun, LogIn, LogOut, ShieldCheck, Search, Sprout, UserCog, Library, SquarePen, PackagePlus } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -75,10 +75,16 @@ export function Header() {
                 {isAdmin && (
                     <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
+                     <DropdownMenuItem asChild>
                         <Link href="/admin">
                         <UserCog className="mr-2 h-4 w-4" />
-                        <span>Admin</span>
+                        <span>Admin Dashboard</span>
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/admin/datapacks">
+                        <PackagePlus className="mr-2 h-4 w-4" />
+                        <span>Manage DataPacks</span>
                         </Link>
                     </DropdownMenuItem>
                     </>
