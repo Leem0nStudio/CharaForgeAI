@@ -273,26 +273,19 @@ const dataPackRouter = router({
       const packsSnapshot = await db.collection('datapacks').orderBy('createdAt', 'desc').get();
       return packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
     }),
-    listInstalled: privateProcedure.query(async ({ ctx }) => {
-        const userRef = db.collection('users').doc(ctx.user.uid);
-        const userDoc = await userRef.get();
-        if (!userDoc.exists) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
-        }
-        const userData = userDoc.data();
-        const installedPackIds = userData?.installedPacks || [];
-
-        if (installedPackIds.length === 0) {
+    getByIds: privateProcedure
+    .input(z.object({ ids: z.array(z.string()) }))
+    .query(async ({ input }) => {
+      if (input.ids.length === 0) {
         return [];
-        }
-
-        const packsSnapshot = await db
+      }
+      const packsSnapshot = await db
         .collection('datapacks')
-        .where(FieldValue.documentId(), 'in', installedPackIds)
+        .where(FieldValue.documentId(), 'in', input.ids)
         .get();
-        
-        const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
-        return packs;
+      
+      const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));
+      return packs;
   }),
 });
 

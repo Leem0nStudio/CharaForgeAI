@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
-import { Sparkles, Wand2, ArrowLeft, CheckCircle } from "lucide-react";
+import { Sparkles, Wand2, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 
 import { generateCharacterNameAndBio } from "@/ai/flows/generate-character-name-and-bio";
 import { generateCharacterImage } from "@/ai/flows/generate-character-image";
@@ -34,6 +34,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,9 +63,16 @@ export function CharacterCreator() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  const { data: installedPacks, isLoading: arePacksLoading } = trpc.datapack.listInstalled.useQuery(undefined, {
+  const { data: userData } = trpc.user.getUser.useQuery(undefined, {
     enabled: !!user,
   });
+
+  const { data: installedPacks, isLoading: arePacksLoading } = trpc.datapack.getByIds.useQuery(
+    { ids: userData?.installedPacks || [] },
+    {
+      enabled: !!user && !!userData?.installedPacks && userData.installedPacks.length > 0,
+    }
+  );
 
   const createCharacterMutation = trpc.character.createCharacter.useMutation({
     onSuccess: () => {
@@ -232,7 +240,7 @@ export function CharacterCreator() {
           </div>
         </CardHeader>
         <CardContent>
-            {isTemplateLoading && <p>Loading template...</p>}
+            {isTemplateLoading && <div className="flex items-center justify-center p-8"><Loader2 className="animate-spin" /></div>}
             {!isTemplateLoading && promptTemplate && (
                  <PromptBuilder
                     key={selectedPack?.id}
