@@ -20,18 +20,18 @@ export function Header() {
   const { user, isAdmin, signInWithGoogle, signOut } = useAuth();
 
   return (
-    <header className="py-6 px-4 md:px-8 border-b shadow-sm flex justify-between items-center">
-      <div>
-        <Link href="/" className="flex items-center gap-2">
-            <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary">
+    <header className="py-4 px-4 md:px-8 border-b shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="text-center md:text-left">
+        <Link href="/" className="flex items-center justify-center md:justify-start gap-2">
+            <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary">
             CharaForge AI
             </h1>
         </Link>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Craft unique characters with the power of AI
         </p>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -92,7 +92,7 @@ export function Header() {
         ) : (
           <Button onClick={signInWithGoogle}>
             <LogIn className="mr-2 h-4 w-4" />
-            Sign in with Google
+            Sign in
           </Button>
         )}
         <DropdownMenu>

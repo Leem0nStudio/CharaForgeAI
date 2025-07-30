@@ -68,7 +68,7 @@ export function PublicGallery() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
           <Card key={i}>
             <Skeleton className="h-64 w-full" />
@@ -104,7 +104,7 @@ export function PublicGallery() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
       {characters.map((character) => {
         const isLiked = user ? character.likedBy.includes(user.uid) : false;
 
@@ -119,7 +119,7 @@ export function PublicGallery() {
                 className="w-full h-auto aspect-square object-cover"
               />
               <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <AddToCollection characterId={character.id} />
+                 {user && <AddToCollection characterId={character.id} />}
               </div>
             </div>
             <CardHeader>
@@ -135,7 +135,7 @@ export function PublicGallery() {
                 variant="outline"
                 className="w-full"
                 onClick={() => handleLikeToggle(character.id, isLiked)}
-                disabled={likeMutation.isPending || unlikeMutation.isPending}
+                disabled={likeMutation.isPending || unlikeMutation.isPending || !user}
               >
                 <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                 {character.likes} {character.likes === 1 ? "Like" : "Likes"}

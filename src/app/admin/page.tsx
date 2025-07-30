@@ -5,7 +5,7 @@ import { AdminDashboard } from "@/components/admin-dashboard";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export default function AdminPage() {
-    const { user, loading } = useAuth();
+    const { user, loading, isAdmin } = useAuth();
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -20,7 +20,7 @@ export default function AdminPage() {
                     <div className="flex justify-center items-center h-64">
                         <p>Loading...</p>
                     </div>
-                ) : user ? (
+                ) : user && isAdmin ? (
                     <AdminDashboard />
                 ) : (
                     <div className="text-center py-16">
