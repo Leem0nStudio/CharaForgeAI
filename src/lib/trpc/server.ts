@@ -51,6 +51,9 @@ const UserSchema = z.object({
   purchasedPacks: z.array(z.string()),
   installedPacks: z.array(z.string()),
   subscriptionTier: z.string(),
+  totalLikes: z.number().default(0),
+  displayName: z.string().nullable(),
+  photoURL: z.string().url().nullable(),
 });
 
 const UserUpdateSchema = UserSchema.partial();
@@ -62,7 +65,13 @@ const userRouter = router({
     if (!userDoc.exists) {
       throw new Error('User not found');
     }
-    return UserSchema.parse(userDoc.data());
+    
+    const data = userDoc.data();
+    // Ensure totalLikes has a default value
+    if (data && typeof data.totalLikes === 'undefined') {
+        data.totalLikes = 0;
+    }
+    return UserSchema.parse(data);
   }),
   updateUser: privateProcedure
     .input(UserUpdateSchema)
@@ -102,47 +111,28 @@ const userRouter = router({
     .query(async ({ input }) => {
         const limit = input?.limit ?? 10;
         
-        // This is a simplified approach. A more scalable solution might involve
-        // aggregating likes on a user document.
-        const charactersSnapshot = await db
-            .collection('characters')
-            .where('publicStatus', '==', true)
-            .orderBy('likes', 'desc')
-            .limit(100) // Get a larger pool of characters to find unique creators
+        // More efficient query directly on the users collection
+        const usersSnapshot = await db
+            .collection('users')
+            .orderBy('totalLikes', 'desc')
+            .limit(limit)
             .get();
 
-        const userLikes: Record<string, { totalLikes: number; userId: string }> = {};
-        
-        charactersSnapshot.docs.forEach(doc => {
-            const character = doc.data();
-            if (character.userId) {
-                if (!userLikes[character.userId]) {
-                    userLikes[character.userId] = { totalLikes: 0, userId: character.userId };
-                }
-                userLikes[character.userId].totalLikes += (character.likes || 0);
-            }
-        });
-
-        const sortedCreators = Object.values(userLikes).sort((a, b) => b.totalLikes - a.totalLikes);
-        const topCreatorIds = sortedCreators.slice(0, limit).map(c => c.userId);
-
-        if (topCreatorIds.length === 0) {
+        if (usersSnapshot.empty) {
             return [];
         }
 
-        const userRecords = await auth.getUsers(topCreatorIds.map(uid => ({ uid })));
-        
-        const creators = userRecords.users.map(user => {
-            const userProfile = {
-                uid: user.uid,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                totalLikes: userLikes[user.uid]?.totalLikes || 0
-            }
-            return userProfile;
+        const creators = usersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                uid: data.uid,
+                displayName: data.displayName,
+                photoURL: data.photoURL,
+                totalLikes: data.totalLikes || 0,
+            };
         });
 
-        return creators.sort((a, b) => b.totalLikes - a.totalLikes);
+        return creators;
     }),
 });
 
@@ -274,7 +264,11 @@ const characterRouter = router({
     .query(async ({ input }) => {
         const limit = input?.limit ?? 8;
         const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(limit).get();
-        return snapshot.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
+        // Filter out characters that might have missing image URLs
+        const characters = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(char => char.imageUrl);
+        return characters.map(char => CharacterSchema.parse(char));
     }),
 
   updateCharacter: privateProcedure
@@ -319,22 +313,32 @@ const characterRouter = router({
     .input(z.object({ characterId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const characterRef = db.collection('characters').doc(input.characterId);
-      const characterDoc = await characterRef.get();
-      if (!characterDoc.exists || !characterDoc.data()?.publicStatus) {
-        throw new Error('Character not found or is not public.');
-      }
-
+      
       await db.runTransaction(async (transaction) => {
         const charDoc = await transaction.get(characterRef);
-        if (!charDoc.exists) return;
-        const likedBy = charDoc.data()?.likedBy || [];
+        if (!charDoc.exists || !charDoc.data()?.publicStatus) {
+            throw new Error('Character not found or is not public.');
+        }
+
+        const charData = charDoc.data();
+        const likedBy = charData?.likedBy || [];
         if (likedBy.includes(ctx.user.uid)) {
           return; // User has already liked this
         }
+        
+        // Update character
         transaction.update(characterRef, {
           likes: FieldValue.increment(1),
           likedBy: FieldValue.arrayUnion(ctx.user.uid),
         });
+
+        // Update user's totalLikes
+        if (charData.userId) {
+            const userRef = db.collection('users').doc(charData.userId);
+            transaction.update(userRef, {
+                totalLikes: FieldValue.increment(1)
+            });
+        }
       });
       
       return { success: true };
@@ -347,15 +351,29 @@ const characterRouter = router({
 
        await db.runTransaction(async (transaction) => {
         const charDoc = await transaction.get(characterRef);
-        if (!charDoc.exists) return;
-        const likedBy = charDoc.data()?.likedBy || [];
+        if (!charDoc.exists) {
+            throw new Error('Character not found.');
+        }
+        
+        const charData = charDoc.data();
+        const likedBy = charData?.likedBy || [];
         if (!likedBy.includes(ctx.user.uid)) {
           return; // User hasn't liked this, nothing to do
         }
+        
+        // Update character
         transaction.update(characterRef, {
           likes: FieldValue.increment(-1),
           likedBy: FieldValue.arrayRemove(ctx.user.uid),
         });
+
+        // Update user's totalLikes
+        if (charData.userId) {
+            const userRef = db.collection('users').doc(charData.userId);
+             transaction.update(userRef, {
+                totalLikes: FieldValue.increment(-1)
+            });
+        }
       });
 
       return { success: true };

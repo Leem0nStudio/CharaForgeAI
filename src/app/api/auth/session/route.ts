@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
           purchasedPacks: [],
           installedPacks: ["core_base_styles"],
           subscriptionTier: "free",
+          totalLikes: 0, // Add default totalLikes
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
         });
