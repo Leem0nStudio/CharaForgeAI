@@ -13,7 +13,7 @@ import { cookies, ReadonlyRequestCookies } from 'next/headers';
 // It now receives the cookies object directly from the request handler.
 export const createContext = async (cookieStore: ReadonlyRequestCookies) => {
   // Intenta leer la cookie dentro de un Promise.resolve() para asegurar el contexto asíncrono
-  const sessionCookie = await Promise.resolve(cookieStore.get('__session')?.value || '');
+  const sessionCookie = cookieStore.get('__session')?.value || '';
 
   if (!sessionCookie) {
     return { user: null };

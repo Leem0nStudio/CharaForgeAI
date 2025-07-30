@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Configure allowedDevOrigins for Firebase Studio preview
+  devServer: {
+    allowedDevOrigins: ['https://6000-firebase-studio-1753843934284.cluster-ve345ymguzcd6qqzuko2qbxtfe.cloudworkstations.dev'],
+  },
 };
 
 export default nextConfig;
