@@ -1,4 +1,5 @@
 
+
 import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { auth, db } from '@/lib/firebase/server';
@@ -86,8 +87,16 @@ const userRouter = router({
       throw new Error('User not found in Firestore');
     }
     
-    const data = userDoc.data();
-    if (data && typeof data.totalLikes === 'undefined') {
+    const data = userDoc.data()!;
+    
+    // Auto-correction for missing base pack
+    if (!data.installedPacks || !data.installedPacks.includes('core_base_styles')) {
+        const updatedPacks = [...(data.installedPacks || []), 'core_base_styles'];
+        await userRef.update({ installedPacks: updatedPacks });
+        data.installedPacks = updatedPacks;
+    }
+
+    if (typeof data.totalLikes === 'undefined') {
         data.totalLikes = 0;
     }
     return UserSchema.parse(data);
@@ -561,4 +570,5 @@ export const appRouter = router({
 
 export type AppRouter = typeof appRouter;
 
+    
     
