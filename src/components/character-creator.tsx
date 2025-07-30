@@ -1,15 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
-import { Sparkles, Wand2 } from "lucide-react";
+import { Sparkles, Wand2, ArrowLeft, CheckCircle } from "lucide-react";
 
 import { generateCharacterNameAndBio } from "@/ai/flows/generate-character-name-and-bio";
 import { generateCharacterImage } from "@/ai/flows/generate-character-image";
 import { trpc } from "@/lib/trpc/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import {
+  ParsedPromptTemplate,
+  parsePromptTemplateYAML,
+} from "@/lib/prompt-parser";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,12 +36,11 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { PromptBuilder } from "./prompt-builder";
 
 const formSchema = z.object({
-  preferences: z.string().min(20, {
-    message: "Please describe your character in at least 20 characters.",
+  preferences: z.string().min(10, {
+    message: "Please describe your character in at least 10 characters.",
   }),
 });
 
@@ -48,9 +53,18 @@ type Character = {
 export function CharacterCreator() {
   const [character, setCharacter] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPack, setSelectedPack] = useState<{ id: string; name: string } | null>(null);
+  const [promptTemplate, setPromptTemplate] = useState<ParsedPromptTemplate | null>(null);
+  const [isTemplateLoading, setIsTemplateLoading] = useState(false);
+
   const { toast } = useToast();
   const { user } = useAuth();
   const utils = trpc.useUtils();
+
+  const { data: userData, isLoading: isUserLoading } = trpc.user.getUser.useQuery(undefined, { enabled: !!user });
+  const { data: allPacks, isLoading: arePacksLoading } = trpc.datapack.list.useQuery();
+
+  const installedPacks = allPacks?.filter(p => userData?.installedPacks.includes(p.id)) || [];
 
   const createCharacterMutation = trpc.character.createCharacter.useMutation({
     onSuccess: () => {
@@ -71,39 +85,62 @@ export function CharacterCreator() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      preferences: "",
-    },
+    defaultValues: { preferences: "" },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Error",
-        description: "You must be signed in to create a character.",
-      });
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      if (!selectedPack) return;
+
+      setIsTemplateLoading(true);
+      setPromptTemplate(null);
+      try {
+        const response = await fetch(`/api/datapacks/${selectedPack.id}/template`);
+        if (!response.ok) {
+          if (response.status !== 404) { // Ignore 404s, it just means no template
+             throw new Error(`Failed to fetch template: ${response.statusText}`);
+          }
+          return;
+        }
+        const yamlText = await response.text();
+        const parsed = parsePromptTemplateYAML(yamlText);
+        setPromptTemplate(parsed);
+      } catch (error: any) {
+        console.error(error);
+        toast({ variant: "destructive", title: "Could not load DataPack template", description: error.message });
+      } finally {
+        setIsTemplateLoading(false);
+      }
+    };
+    fetchTemplate();
+  }, [selectedPack, toast]);
+
+
+  async function handleGeneration(
+    basePreferences: string,
+    promptBuilderResult?: { prompt: string; negativePrompt: string }
+  ) {
+    if (!user || !selectedPack) {
+      toast({ variant: "destructive", title: "Authentication Error" });
       return;
     }
-    
+
     setIsLoading(true);
     setCharacter(null);
 
     try {
-      const imagePrompt = `A fantasy portrait of a character described as: ${values.preferences}. High quality, digital painting, intricate details.`;
-      
-      const datapackId = "core_base_styles";
+      const imagePrompt = promptBuilderResult?.prompt || `A fantasy portrait of a character described as: ${basePreferences}. High quality, digital painting, intricate details.`;
 
       const [nameAndBioResult, imageResult] = await Promise.all([
-        generateCharacterNameAndBio({ 
+        generateCharacterNameAndBio({
           userId: user.uid,
-          datapackId: datapackId,
-          userPreferences: values.preferences 
+          datapackId: selectedPack.id,
+          userPreferences: basePreferences,
         }),
         generateCharacterImage({
           userId: user.uid,
-          datapackId: datapackId,
-          prompt: imagePrompt
+          datapackId: selectedPack.id,
+          prompt: imagePrompt,
         }),
       ]);
 
@@ -121,73 +158,119 @@ export function CharacterCreator() {
       };
 
       setCharacter(newCharacter);
-
-      // Save the character to the vault
       createCharacterMutation.mutate({
         ...newCharacter,
-        associatedDataPacks: [datapackId],
+        associatedDataPacks: [selectedPack.id],
       });
-
     } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Oh no! Something went wrong.",
-        description: error.message ||
-          "There was a problem with the AI generation. Please try again.",
+        description: error.message || "There was a problem with the AI generation. Please try again.",
       });
     } finally {
       setIsLoading(false);
     }
   }
 
+  const renderPackSelection = () => (
+    <Card className="bg-secondary/20 border-border/50">
+      <CardHeader>
+        <CardTitle className="font-headline text-3xl">Step 1: Choose a Style Pack</CardTitle>
+        <CardDescription>Select one of your installed DataPacks to define the character's core style.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isUserLoading || arePacksLoading ? (
+           <div className="grid grid-cols-2 gap-4">
+             <Skeleton className="h-24 w-full" />
+             <Skeleton className="h-24 w-full" />
+           </div>
+        ) : installedPacks.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {installedPacks.map((pack) => (
+              <Card
+                key={pack.id}
+                className="cursor-pointer hover:border-primary transition-colors bg-background/50"
+                onClick={() => setSelectedPack(pack)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-lg">{pack.name}</CardTitle>
+                  <CardDescription className="line-clamp-2">{pack.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        ) : (
+            <p>No data packs installed.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderPromptBuilder = () => (
+     <Card className="bg-secondary/20 border-border/50">
+        <CardHeader>
+          <div className="flex items-center gap-4">
+             <Button variant="outline" size="icon" onClick={() => { setSelectedPack(null); setPromptTemplate(null); }}>
+                <ArrowLeft />
+            </Button>
+            <div>
+                 <CardTitle className="font-headline text-3xl">Step 2: Customize Your Character</CardTitle>
+                 <CardDescription>You're using the <span className="font-bold text-primary">{selectedPack?.name}</span> style pack.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+            {isTemplateLoading && <p>Loading template...</p>}
+            {!isTemplateLoading && promptTemplate && (
+                 <PromptBuilder
+                    key={selectedPack?.id}
+                    schema={promptTemplate}
+                    onSubmit={(result) => handleGeneration(form.getValues('preferences'), result)}
+                    isLoading={isLoading || createCharacterMutation.isPending}
+                />
+            )}
+             {!isTemplateLoading && !promptTemplate && (
+                 <Form {...form}>
+                    <form onSubmit={form.handleSubmit(v => handleGeneration(v.preferences))} className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="preferences"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Character Details</FormLabel>
+                                <FormControl>
+                                <Textarea
+                                    placeholder="e.g., 'A wise old wizard with a long white beard...'"
+                                    className="min-h-[120px] resize-y bg-background/50 focus:bg-background"
+                                    {...field}
+                                />
+                                </FormControl>
+                                <FormMessage />
+                                <FormDescription>This pack has no custom template. Describe your character freely.</FormDescription>
+                            </FormItem>
+                            )}
+                        />
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={isLoading || createCharacterMutation.isPending}>
+                                <Wand2 className="mr-2 h-4 w-4" /> Forge Character
+                            </Button>
+                        </div>
+                    </form>
+                 </Form>
+             )}
+        </CardContent>
+     </Card>
+  );
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-6xl mx-auto">
-      <Card className="bg-secondary/20 border-border/50">
-        <CardHeader>
-          <CardTitle className="font-headline text-3xl">Describe Your Character</CardTitle>
-          <CardDescription>
-            Provide a description, and our AI will bring your character to life.
-          </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="preferences"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Character Details</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="e.g., 'A wise old wizard with a long white beard, a mischievous twinkle in his eyes, holding a glowing staff.'"
-                        className="min-h-[120px] resize-y bg-background/50 focus:bg-background"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={isLoading || createCharacterMutation.isPending} className="w-full">
-                {isLoading ? (
-                  "Generating..."
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Forge Character
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+      <div>
+        {!selectedPack ? renderPackSelection() : renderPromptBuilder()}
+      </div>
       
-      <Card className="min-h-[400px] flex flex-col justify-center transition-all duration-300 bg-secondary/20 border-border/50">
+      <Card className="min-h-[400px] flex flex-col justify-center transition-all duration-300 bg-secondary/20 border-border/50 sticky top-24">
         {isLoading && (
           <div className="animate-in fade-in">
              <Skeleton className="w-full aspect-square rounded-t-lg" />
@@ -235,3 +318,5 @@ export function CharacterCreator() {
     </div>
   );
 }
+
+    

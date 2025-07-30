@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/card";
 import { Wand2 } from "lucide-react";
 import React from "react";
+import { Textarea } from "./ui/textarea";
 
 interface PromptBuilderProps {
   schema: ParsedPromptTemplate;
@@ -59,7 +60,8 @@ export function PromptBuilder({ schema, onSubmit, isLoading = false }: PromptBui
          result = result.replace(re, value);
       }
     }
-    return result;
+    // Clean up any placeholders that weren't filled
+    return result.replace(/\{[^{}]+?\}/g, '').replace(/,\s*,/g, ',').replace(/,\s*$/g, '');
   }, [schema.template, schema.placeholders, watchedInputs]);
 
   const finalPrompt = buildPrompt();
@@ -89,14 +91,14 @@ export function PromptBuilder({ schema, onSubmit, isLoading = false }: PromptBui
               key={ph.key}
               control={form.control}
               name={ph.key}
-              defaultValue=""
+              defaultValue={ph.type === 'textarea' ? ph.label : ''} // Use label as default for textarea
               render={({ field }) => (
-                <FormItem>
+                <FormItem className={ph.type === 'textarea' ? 'md:col-span-2' : ''}>
                   <FormLabel>{ph.label}</FormLabel>
                     <FormControl>
                     {ph.type === "select" ? (
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <SelectTrigger>
+                            <SelectTrigger className="bg-background/50 focus:bg-background">
                                 <SelectValue placeholder={`Select ${ph.label}...`} />
                             </SelectTrigger>
                             <SelectContent>
@@ -107,8 +109,14 @@ export function PromptBuilder({ schema, onSubmit, isLoading = false }: PromptBui
                             ))}
                             </SelectContent>
                         </Select>
+                    ) : ph.type === 'textarea' ? (
+                      <Textarea
+                        placeholder={ph.label}
+                        className="min-h-[120px] resize-y bg-background/50 focus:bg-background"
+                        {...field}
+                      />
                     ) : (
-                        <Input placeholder={ph.label} {...field} />
+                        <Input placeholder={ph.label} {...field} className="bg-background/50 focus:bg-background" />
                     )}
                     </FormControl>
                   <FormMessage />
@@ -118,7 +126,7 @@ export function PromptBuilder({ schema, onSubmit, isLoading = false }: PromptBui
           ))}
         </div>
         
-        <Card className="bg-secondary/30">
+        <Card className="bg-background/30">
             <CardHeader>
                 <CardTitle>Generated Prompt</CardTitle>
                 <CardDescription>This is the final prompt that will be sent to the AI.</CardDescription>
@@ -150,3 +158,5 @@ export function PromptBuilder({ schema, onSubmit, isLoading = false }: PromptBui
     </Form>
   );
 }
+
+    

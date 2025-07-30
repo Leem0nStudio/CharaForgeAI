@@ -24,48 +24,52 @@ export function parsePromptTemplateYAML(yamlText: string): ParsedPromptTemplate 
 
   // Use a set to avoid duplicate placeholder definitions from template strings
   const uniqueMatches = new Set<string>();
-  let match;
-  while ((match = placeholderPattern.exec(template)) !== null) {
-    uniqueMatches.add(match[1]); // e.g., "accessory", "color.palette_triad[0]"
-  }
+  const allMatches = [...template.matchAll(placeholderPattern)];
 
   const placeholders: Placeholder[] = [];
-  const processedKeys = new Set<string>();
 
-  for (const inner of uniqueMatches) {
+  for (const match of allMatches) {
+    const fullMatch = match[0]; // e.g. "{accessory}"
+    const inner = match[1]; // e.g. "accessory", "color.palette_triad[0]"
+
     const keyMatch = inner.match(/^([^\[\]]+)(\[(\d+)\])?$/);
     if (!keyMatch) continue;
 
     const rawKey = keyMatch[1]; // e.g., "color.palette_triad"
+    const index = keyMatch[3] ? parseInt(keyMatch[3], 10) : undefined;
     
-    // Only process each unique rawKey once
-    if (processedKeys.has(rawKey)) continue;
+    const def = parsed.placeholders?.[rawKey] ?? parsed.placeholders?.[inner];
 
-    const def = parsed.placeholders?.[rawKey];
-
-    if (def) {
-       placeholders.push({
-        key: rawKey,
-        fullMatch: `{${rawKey}}`, // This is a representative match, not all of them
-        type: def.type,
-        label: def.label,
-        options: def.options,
-      });
-      processedKeys.add(rawKey);
-    } else {
-        placeholders.push({
-        key: rawKey,
-        fullMatch: `{${rawKey}}`,
-        type: 'text', // Default type for undefined placeholders
-        label: rawKey,
-      });
-      processedKeys.add(rawKey);
+    let label = rawKey;
+    if (def?.label) {
+        label = index !== undefined ? `${def.label} #${index + 1}` : def.label;
     }
+
+    placeholders.push({
+      key: inner, // Use the full inner key for uniqueness in the form
+      fullMatch: fullMatch,
+      type: def?.type || 'text', // Default type for undefined placeholders
+      label: label,
+      options: def?.options,
+      repeatIndex: index
+    });
   }
+  
+  // Create a unique list of placeholders to render in the form
+  // This prevents rendering {color[0]} and {color[1]} as two separate form fields
+  // if they share the same base `key`. We will handle the array logic in the builder.
+  const uniqueRenderPlaceholders = Array.from(new Map(placeholders.map(p => {
+    const baseKey = p.key.split('[')[0];
+    const def = parsed.placeholders?.[baseKey];
+    return [baseKey, { ...p, key: baseKey, label: def?.label ?? baseKey }];
+  })).values());
+
 
   return {
     template,
     negativePrompt,
-    placeholders,
+    placeholders: uniqueRenderPlaceholders,
   };
 }
+
+    
