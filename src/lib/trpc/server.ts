@@ -13,7 +13,8 @@ const t = initTRPC.context<{
 const middleware = t.middleware;
 
 const isAuthenticated = middleware(async (opts) => {
-  const session = cookies().get('__session')?.value || '';
+  const cookiesStore = cookies();
+  const session = cookiesStore.get('__session')?.value || '';
 
   if (!session) {
     throw new Error('Unauthorized: No session cookie found.');
@@ -515,5 +516,3 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-
-    
