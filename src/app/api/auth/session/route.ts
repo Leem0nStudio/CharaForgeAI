@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
           uid: decodedToken.uid,
           email: decodedToken.email,
           purchasedPacks: [],
-          installedPacks: [],
+          installedPacks: ["core_base_styles"],
           subscriptionTier: "free",
         });
       }

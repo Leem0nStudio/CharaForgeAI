@@ -2,6 +2,7 @@ import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { auth, db } from '@/lib/firebase/server';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const t = initTRPC.create();
 
@@ -32,7 +33,7 @@ export const privateProcedure = t.procedure.use(isAuthenticated);
 
 const UserSchema = z.object({
   uid: z.string(),
-  email: z.string().email(),
+  email: z.string().email().nullable(),
   purchasedPacks: z.array(z.string()),
   installedPacks: z.array(z.string()),
   subscriptionTier: z.string(),
@@ -61,6 +62,27 @@ const userRouter = router({
     await auth.deleteUser(ctx.user.uid);
     return { success: true };
   }),
+  installDataPack: privateProcedure
+    .input(z.object({ packId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userRef = db.collection('users').doc(ctx.user.uid);
+      await userRef.update({
+        installedPacks: FieldValue.arrayUnion(input.packId),
+      });
+      return { success: true };
+    }),
+  uninstallDataPack: privateProcedure
+    .input(z.object({ packId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+       if (input.packId === 'core_base_styles') {
+        throw new Error('Cannot uninstall core system pack.');
+       }
+      const userRef = db.collection('users').doc(ctx.user.uid);
+      await userRef.update({
+        installedPacks: FieldValue.arrayRemove(input.packId),
+      });
+      return { success: true };
+    }),
 });
 
 const DataPackSchema = z.object({
