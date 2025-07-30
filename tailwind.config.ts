@@ -19,8 +19,8 @@ const config = {
     },
     extend: {
       fontFamily: {
-        body: ["'PT Sans'", "sans-serif"],
-        headline: ["'Playfair Display'", "serif"],
+        body: ["'Montserrat'", "sans-serif"],
+        headline: ["'Exo 2'", "sans-serif"],
         code: ["monospace"],
       },
       colors: {
