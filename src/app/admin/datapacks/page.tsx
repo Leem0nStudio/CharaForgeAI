@@ -93,7 +93,7 @@ export default function AdminDataPacksPage() {
                                         <TableRow key={pack.id}>
                                             <TableCell>
                                                 {pack.coverImageUrl && (
-                                                    <Image src={pack.coverImageUrl} alt={pack.name} width={40} height={40} className="rounded-sm object-cover" />
+                                                    <Image src={pack.coverImageUrl} alt={pack.name} width={128} height={72} className="rounded-sm object-cover aspect-[16/9]" />
                                                 )}
                                             </TableCell>
                                             <TableCell className="font-medium">{pack.name}</TableCell>
@@ -118,7 +118,7 @@ export default function AdminDataPacksPage() {
                                     <CardHeader>
                                         <div className="flex items-start gap-4">
                                              {pack.coverImageUrl && (
-                                                <Image src={pack.coverImageUrl} alt={pack.name} width={64} height={64} className="rounded-md object-cover" />
+                                                <Image src={pack.coverImageUrl} alt={pack.name} width={128} height={72} className="rounded-md object-cover aspect-[16/9]" />
                                             )}
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start">

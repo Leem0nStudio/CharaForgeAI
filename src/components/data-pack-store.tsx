@@ -83,7 +83,7 @@ export function DataPackStore() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
            <Card key={i}>
-             <Skeleton className="h-40 w-full" />
+             <Skeleton className="w-full aspect-[16/9]" />
              <CardHeader>
                <Skeleton className="h-6 w-1/2" />
                <Skeleton className="h-4 w-full mt-2" />
@@ -126,13 +126,13 @@ export function DataPackStore() {
         return (
           <Card key={pack.id} className="flex flex-col group overflow-hidden bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-primary/50 transition-all">
             {pack.coverImageUrl && (
-                <div className="overflow-hidden">
+                <div className="overflow-hidden aspect-[16/9]">
                     <Image 
                         src={pack.coverImageUrl} 
                         alt={`Cover image for ${pack.name}`} 
                         width={512}
-                        height={512}
-                        className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                        height={288}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                 </div>
             )}

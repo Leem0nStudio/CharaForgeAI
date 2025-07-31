@@ -186,7 +186,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                         <Card>
                              <CardHeader>
                                 <CardTitle>Cover Image</CardTitle>
-                                <CardDescription>Upload an image for your DataPack. Recommended size: 512x512.</CardDescription>
+                                <CardDescription>Upload an image for your DataPack. Recommended aspect ratio: 16:9.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <FormField
@@ -197,7 +197,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                                             <FormControl>
                                                 <div className="w-full border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center hover:border-primary transition-colors">
                                                     {imagePreview ? (
-                                                        <Image src={imagePreview} alt="Cover preview" width={256} height={256} className="mb-4 rounded-md object-cover" />
+                                                        <Image src={imagePreview} alt="Cover preview" width={320} height={180} className="mb-4 rounded-md object-cover aspect-[16/9]" />
                                                     ) : (
                                                         <UploadCloud className="w-12 h-12 text-muted-foreground mb-4" />
                                                     )}
@@ -260,7 +260,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                                 {imagePreview && (
                                     <div>
                                         <h4 className="font-semibold">Cover Image:</h4>
-                                        <Image src={imagePreview} alt="Cover preview" width={128} height={128} className="rounded-md object-cover mt-2 border" />
+                                        <Image src={imagePreview} alt="Cover preview" width={160} height={90} className="rounded-md object-cover mt-2 border aspect-[16/9]" />
                                     </div>
                                 )}
                                 <div>

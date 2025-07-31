@@ -208,7 +208,7 @@ export function CharacterCreator() {
                 onClick={() => setSelectedPack({id: pack.id, name: pack.name})}
               >
                 {pack.coverImageUrl && (
-                  <Image src={pack.coverImageUrl} alt={pack.name} width={512} height={512} className="w-full h-32 object-cover group-hover:scale-105 transition-transform" />
+                  <Image src={pack.coverImageUrl} alt={pack.name} width={512} height={288} className="w-full h-auto aspect-[16/9] object-cover group-hover:scale-105 transition-transform" />
                 )}
                 <CardHeader>
                   <CardTitle className="text-lg">{pack.name}</CardTitle>
