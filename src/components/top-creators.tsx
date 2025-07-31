@@ -1,3 +1,4 @@
+
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
@@ -11,12 +12,23 @@ import type { AppRouter } from "@/lib/trpc/server";
 
 type Creator = inferRouterOutputs<AppRouter["user"]["getTopCreators"]>[number];
 
-export function TopCreators() {
+type TopCreatorsProps = {
+  initialData: Creator[];
+}
+
+export function TopCreators({ initialData }: TopCreatorsProps) {
   const {
     data: creators,
     isLoading,
     error,
-  } = trpc.user.getTopCreators.useQuery({ limit: 4 });
+  } = trpc.user.getTopCreators.useQuery(
+    { limit: 4 },
+    {
+      initialData: initialData,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    }
+  );
 
   if (isLoading) {
     return (

@@ -4,13 +4,28 @@
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CharacterCard } from "./character-card";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@/lib/trpc/server";
 
-export function FeaturedCharacters() {
+type Character = inferRouterOutputs<AppRouter["character"]["getTopCharacters"]>[number];
+
+type FeaturedCharactersProps = {
+  initialData: Character[];
+};
+
+export function FeaturedCharacters({ initialData }: FeaturedCharactersProps) {
   const {
     data: characters,
     isLoading,
     error,
-  } = trpc.character.getTopCharacters.useQuery({ limit: 4 });
+  } = trpc.character.getTopCharacters.useQuery(
+    { limit: 4 },
+    {
+      initialData: initialData,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    }
+  );
 
   if (isLoading) {
     return (

@@ -1,6 +1,4 @@
 
-"use client";
-
 import { Header } from "@/components/header";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,9 +6,18 @@ import { Heart, Users, Package, ArrowRight } from "lucide-react";
 import { DataPackStore } from "@/components/data-pack-store";
 import { FeaturedCharacters } from "@/components/featured-characters";
 import { TopCreators } from "@/components/top-creators";
+import { appRouter } from "@/lib/trpc/server";
+import { createContext } from "@/lib/trpc/trpc";
+import { headers } from "next/headers";
 
+export default async function Home() {
+  const trpc = appRouter.createCaller(await createContext({ headers: headers() }));
+  
+  const [topCharacters, topCreators] = await Promise.all([
+    trpc.character.getTopCharacters({ limit: 4 }),
+    trpc.user.getTopCreators({ limit: 4 })
+  ]);
 
-export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
@@ -40,7 +47,7 @@ export default function Home() {
                 <Link href="/explore">View Gallery <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
-          <FeaturedCharacters />
+          <FeaturedCharacters initialData={topCharacters} />
         </section>
 
         <section className="mb-12 md:mb-16">
@@ -50,7 +57,7 @@ export default function Home() {
                 Top Creators
             </h2>
           </div>
-          <TopCreators />
+          <TopCreators initialData={topCreators} />
         </section>
 
         <section>
