@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (userState) => {
-      setLoading(true);
       if (userState) {
         const idTokenResult = await userState.getIdTokenResult();
         setUser(userState);
@@ -56,27 +55,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     try {
       await signInWithPopup(auth, provider);
-      // After sign-in, onAuthStateChanged will trigger and handle the user state.
-      // We can invalidate queries here to ensure data is fresh.
+      // onAuthStateChanged will handle the user state update.
+      // We invalidate queries here to ensure data is fresh after login.
       await queryClient.invalidateQueries();
     } catch (error: any) {
       if (error.code !== "auth/popup-closed-by-user") {
         console.error("Error signing in with Google: ", error);
       }
-    } finally {
-      // setLoading will be updated by onAuthStateChanged
+      // In case of error, ensure loading state is reset.
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
       await auth.signOut();
-      // After sign-out, onAuthStateChanged will trigger, setting user to null.
+      // onAuthStateChanged will handle setting user to null.
       await queryClient.invalidateQueries();
     } catch (error) {
       console.error("Error signing out: ", error);
-      setLoading(false);
     }
   };
 
