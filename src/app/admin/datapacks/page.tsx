@@ -109,12 +109,12 @@ export default function AdminDataPacksPage() {
     }
 
     return (
-        <>
-            <div className="mb-8 text-center">
+        <div>
+            <div className="mb-8">
                 <h2 className="text-3xl font-bold font-headline">Manage DataPacks</h2>
                 <p className="text-muted-foreground">Create, view, and manage character DataPacks.</p>
             </div>
             {renderContent()}
-        </>
+        </div>
     );
 }

@@ -1,9 +1,11 @@
 
 "use client";
 
-import { Header } from "@/components/header";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2 } from "lucide-react";
+import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AdminNav } from "@/components/admin-nav";
+import { Header } from "@/components/header";
 
 export default function AdminLayout({
   children,
@@ -31,15 +33,25 @@ export default function AdminLayout({
         </div>
       );
     }
-    return children;
+    
+    return (
+        <SidebarProvider>
+            <div className="flex">
+                <Sidebar>
+                    <AdminNav />
+                </Sidebar>
+                <main className="flex-1 p-4 md:p-8">
+                     {children}
+                </main>
+            </div>
+        </SidebarProvider>
+    )
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
-      <main className="p-4 md:p-8">
-        {renderContent()}
-      </main>
+      {renderContent()}
     </div>
   );
 }

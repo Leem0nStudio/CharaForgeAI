@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, ShieldCheck, Search, UserCog, Library, SquarePen, PackagePlus } from "lucide-react";
+import { LogOut, ShieldCheck, Search, UserCog, Library, SquarePen } from "lucide-react";
 
 
 export function UserNav() {
@@ -65,13 +65,7 @@ export function UserNav() {
                      <DropdownMenuItem asChild>
                         <Link href="/admin">
                         <UserCog className="mr-2 h-4 w-4" />
-                        <span>Admin Dashboard</span>
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href="/admin/datapacks">
-                        <PackagePlus className="mr-2 h-4 w-4" />
-                        <span>Manage DataPacks</span>
+                        <span>Admin Panel</span>
                         </Link>
                     </DropdownMenuItem>
                     </>
