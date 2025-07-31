@@ -43,7 +43,7 @@ export default function AdminLayout({
           </Sidebar>
           <div className="flex-1">
             <main className="p-4 md:p-8">
-              <div className="md:hidden flex items-center mb-4">
+              <div className="flex items-center mb-4 md:hidden">
                  <SidebarTrigger />
                  <span className="font-semibold ml-2">Admin Menu</span>
               </div>
