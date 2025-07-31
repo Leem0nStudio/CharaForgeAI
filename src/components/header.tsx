@@ -1,8 +1,10 @@
+
 "use client";
 
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +14,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AuthActions } from "./auth-actions";
+import { AdminHeaderNav } from "./admin-header-nav";
 
 export function Header() {
   const { setTheme } = useTheme();
+  const pathname = usePathname();
+  const isAdminPage = pathname.startsWith('/admin');
 
   return (
     <header className="py-4 px-4 md:px-8 border-b shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
@@ -29,7 +34,7 @@ export function Header() {
         </p>
       </div>
       <div className="flex items-center gap-2 md:gap-4">
-        <AuthActions />
+        {isAdminPage ? <AdminHeaderNav /> : <AuthActions />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon">
