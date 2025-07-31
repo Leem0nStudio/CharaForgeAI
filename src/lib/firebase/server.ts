@@ -14,6 +14,9 @@ if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.
       "Firebase server config is not set. Make sure you have run `firebase-frameworks-tools service-key-add` or have the required FIREBASE_* variables set in your environment."
     );
 }
+if (!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+    throw new Error('Firebase server config is not set. Missing NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET.')
+}
 
 
 const app = !getApps().length
