@@ -12,6 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Loader2, Package } from "lucide-react";
 import {
@@ -67,34 +74,58 @@ export default function AdminDataPacksPage() {
                     </Dialog>
                 </div>
                 {packs && packs.length > 0 ? (
-                    <div className="border rounded-lg">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Created At</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {packs?.map(pack => (
-                                    <TableRow key={pack.id}>
-                                        <TableCell className="font-medium">{pack.name}</TableCell>
-                                        <TableCell className="text-muted-foreground">{pack.description}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
+                    <>
+                        {/* Desktop Table View */}
+                        <div className="border rounded-lg hidden md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Created At</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {packs?.map(pack => (
+                                        <TableRow key={pack.id}>
+                                            <TableCell className="font-medium">{pack.name}</TableCell>
+                                            <TableCell className="text-muted-foreground">{pack.description}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
+                                                    {pack.premiumStatus}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        {/* Mobile Card View */}
+                        <div className="grid gap-4 md:hidden">
+                            {packs.map(pack => (
+                                <Card key={pack.id}>
+                                    <CardHeader>
+                                        <div className="flex justify-between items-start">
+                                            <CardTitle>{pack.name}</CardTitle>
+                                             <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
                                                 {pack.premiumStatus}
                                             </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                        </div>
+                                        <CardDescription>{pack.description}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-xs text-muted-foreground">
+                                            Created: {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </>
                 ) : (
                     <div className="text-center py-16 border-2 border-dashed rounded-lg">
                         <Package className="mx-auto h-12 w-12 text-muted-foreground" />
