@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +18,11 @@ import {
     CardContent,
     CardHeader,
     CardTitle,
-    CardDescription
+    CardDescription,
+    CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2, Package } from "lucide-react";
+import { PlusCircle, Loader2, Package, Edit } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -29,10 +31,17 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { CreateDataPackWizard } from "@/components/create-datapack-wizard";
-import Image from "next/image";
+import { EditDataPackForm } from "@/components/edit-datapack-form";
+import type { inferRouterOutputs } from '@trpc/server';
+import type { AppRouter } from "@/lib/trpc/server";
+
+type DataPack = inferRouterOutputs<AppRouter["datapack"]["listAll"]>[number];
+
 
 export default function AdminDataPacksPage() {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [selectedPack, setSelectedPack] = useState<DataPack | null>(null);
     
     const { data: packs, isLoading: packsLoading, error } = trpc.datapack.listAll.useQuery();
     
@@ -41,6 +50,17 @@ export default function AdminDataPacksPage() {
     const onWizardFinished = () => {
         setIsCreateOpen(false);
         utils.datapack.listAll.invalidate();
+    }
+    
+    const onEditFinished = () => {
+        setIsEditOpen(false);
+        setSelectedPack(null);
+        utils.datapack.listAll.invalidate();
+    }
+
+    const handleEditClick = (pack: DataPack) => {
+        setSelectedPack(pack);
+        setIsEditOpen(true);
     }
 
     const renderContent = () => {
@@ -86,6 +106,7 @@ export default function AdminDataPacksPage() {
                                         <TableHead>Description</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Created At</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -97,7 +118,7 @@ export default function AdminDataPacksPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="font-medium">{pack.name}</TableCell>
-                                            <TableCell className="text-muted-foreground">{pack.description}</TableCell>
+                                            <TableCell className="text-muted-foreground max-w-xs truncate">{pack.description}</TableCell>
                                             <TableCell>
                                                 <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
                                                     {pack.premiumStatus}
@@ -105,6 +126,11 @@ export default function AdminDataPacksPage() {
                                             </TableCell>
                                             <TableCell>
                                                 {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="outline" size="sm" onClick={() => handleEditClick(pack)}>
+                                                    <Edit className="mr-2 h-3 w-3" /> Edit
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -115,27 +141,28 @@ export default function AdminDataPacksPage() {
                         <div className="grid gap-4 md:hidden">
                             {packs.map(pack => (
                                 <Card key={pack.id}>
+                                    {pack.coverImageUrl && (
+                                        <Image src={pack.coverImageUrl} alt={pack.name} width={512} height={288} className="rounded-t-lg object-cover aspect-[16/9]" />
+                                    )}
                                     <CardHeader>
-                                        <div className="flex items-start gap-4">
-                                             {pack.coverImageUrl && (
-                                                <Image src={pack.coverImageUrl} alt={pack.name} width={128} height={72} className="rounded-md object-cover aspect-[16/9]" />
-                                            )}
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-start">
-                                                    <CardTitle>{pack.name}</CardTitle>
-                                                    <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
-                                                        {pack.premiumStatus}
-                                                    </Badge>
-                                                </div>
-                                                <CardDescription>{pack.description}</CardDescription>
-                                            </div>
+                                         <div className="flex justify-between items-start">
+                                            <CardTitle>{pack.name}</CardTitle>
+                                            <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
+                                                {pack.premiumStatus}
+                                            </Badge>
                                         </div>
+                                        <CardDescription>{pack.description}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-xs text-muted-foreground">
                                             Created: {pack.createdAt ? new Date(pack.createdAt._seconds * 1000).toLocaleDateString() : 'N/A'}
                                         </p>
                                     </CardContent>
+                                     <CardFooter>
+                                        <Button variant="outline" className="w-full" onClick={() => handleEditClick(pack)}>
+                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                        </Button>
+                                    </CardFooter>
                                 </Card>
                             ))}
                         </div>
@@ -160,6 +187,20 @@ export default function AdminDataPacksPage() {
                 <p className="text-muted-foreground">Create, view, and manage character DataPacks.</p>
             </div>
             {renderContent()}
+
+            {selectedPack && (
+                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                    <DialogContent className="max-w-4xl">
+                        <DialogHeader>
+                            <DialogTitle>Edit: {selectedPack.name}</DialogTitle>
+                        </DialogHeader>
+                        <EditDataPackForm
+                            datapack={selectedPack}
+                            onFinished={onEditFinished}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }
