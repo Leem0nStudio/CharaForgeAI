@@ -196,20 +196,23 @@ export function CharacterCreator() {
       <CardContent>
         {isUserLoading || (arePacksLoading && userData && userData.installedPacks.length > 0) ? (
            <div className="grid grid-cols-2 gap-4">
-             <Skeleton className="h-24 w-full" />
-             <Skeleton className="h-24 w-full" />
+             <Skeleton className="h-48 w-full" />
+             <Skeleton className="h-48 w-full" />
            </div>
         ) : installedPacks && installedPacks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {installedPacks.map((pack) => (
               <Card
                 key={pack.id}
-                className="cursor-pointer hover:border-primary transition-colors bg-background/50"
+                className="cursor-pointer hover:border-primary transition-all bg-background/50 overflow-hidden group"
                 onClick={() => setSelectedPack({id: pack.id, name: pack.name})}
               >
+                {pack.coverImageUrl && (
+                  <Image src={pack.coverImageUrl} alt={pack.name} width={512} height={512} className="w-full h-32 object-cover group-hover:scale-105 transition-transform" />
+                )}
                 <CardHeader>
                   <CardTitle className="text-lg">{pack.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">{pack.description}</CardDescription>
+                  <CardDescription className="line-clamp-2 text-xs">{pack.description}</CardDescription>
                 </CardHeader>
               </Card>
             ))}

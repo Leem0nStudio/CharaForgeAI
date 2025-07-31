@@ -29,14 +29,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, UploadCloud } from "lucide-react";
+import Image from "next/image";
 
 
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
   description: z.string().min(10, "Description must be at least 10 characters."),
   premiumStatus: z.enum(['free', 'purchased', 'subscription']),
-  promptTemplateContent: z.string().optional()
+  promptTemplateContent: z.string().optional(),
+  coverImage: z.string().optional(),
 });
 
 type CreateDataPackWizardProps = {
@@ -47,6 +49,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState("info");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -55,6 +58,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
             description: "",
             premiumStatus: "free",
             promptTemplateContent: `template: |\n  A high quality fantasy portrait of {name}, a {class}, with {accessory}.\n\nnegative_prompt: |\n  low quality, blurry, ugly\n\nplaceholders:\n  name:\n    type: text\n    label: Character Name\n  class:\n    type: select\n    label: Class\n    options:\n      - Warrior\n      - Mage\n      - Rogue\n  accessory:\n    type: text\n    label: Key Accessory`,
+            coverImage: "",
         },
     });
     
@@ -80,11 +84,27 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
 
     const watchedValues = form.watch();
 
-    const goToNextStep = async () => {
-        const fieldsToValidate = ['name', 'description', 'premiumStatus'] as const;
+    const goToNextStep = async (currentStep: 'info' | 'cover', nextStep: 'cover' | 'template' | 'review') => {
+        const fieldsToValidate: (keyof z.infer<typeof formSchema>)[] = currentStep === 'info' 
+            ? ['name', 'description', 'premiumStatus'] 
+            : ['coverImage'];
+        
         const result = await form.trigger(fieldsToValidate);
         if (result) {
-            setActiveTab("template");
+            setActiveTab(nextStep);
+        }
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const dataUrl = reader.result as string;
+                setImagePreview(dataUrl);
+                form.setValue("coverImage", dataUrl);
+            };
+            reader.readAsDataURL(file);
         }
     }
 
@@ -97,10 +117,11 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="info">1. Basic Info</TabsTrigger>
-                        <TabsTrigger value="template">2. Prompt Template</TabsTrigger>
-                        <TabsTrigger value="review">3. Review & Save</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-4">
+                        <TabsTrigger value="info">1. Info</TabsTrigger>
+                        <TabsTrigger value="cover">2. Cover</TabsTrigger>
+                        <TabsTrigger value="template">3. Template</TabsTrigger>
+                        <TabsTrigger value="review">4. Review</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="info" className="py-4">
@@ -157,7 +178,43 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                             </CardContent>
                         </Card>
                          <div className="flex justify-end mt-4">
-                            <Button type="button" onClick={goToNextStep}>Next Step</Button>
+                            <Button type="button" onClick={() => goToNextStep('info', 'cover')}>Next Step</Button>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="cover" className="py-4">
+                        <Card>
+                             <CardHeader>
+                                <CardTitle>Cover Image</CardTitle>
+                                <CardDescription>Upload an image for your DataPack. Recommended size: 512x512.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <FormField
+                                    control={form.control}
+                                    name="coverImage"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <div className="w-full border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center hover:border-primary transition-colors">
+                                                    {imagePreview ? (
+                                                        <Image src={imagePreview} alt="Cover preview" width={256} height={256} className="mb-4 rounded-md object-cover" />
+                                                    ) : (
+                                                        <UploadCloud className="w-12 h-12 text-muted-foreground mb-4" />
+                                                    )}
+                                                    <p className="text-muted-foreground mb-2">Drag & drop or click to upload</p>
+                                                    <Input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" id="file-upload" onChange={handleFileChange} />
+                                                    <Button type="button" asChild><label htmlFor="file-upload">Choose File</label></Button>
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                        <div className="flex justify-between mt-4">
+                            <Button type="button" variant="outline" onClick={() => setActiveTab("info")}>Previous</Button>
+                            <Button type="button" onClick={() => goToNextStep('cover', 'template')}>Next Step</Button>
                         </div>
                     </TabsContent>
 
@@ -188,7 +245,7 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                             </CardContent>
                         </Card>
                         <div className="flex justify-between mt-4">
-                            <Button type="button" variant="outline" onClick={() => setActiveTab("info")}>Previous</Button>
+                            <Button type="button" variant="outline" onClick={() => setActiveTab("cover")}>Previous</Button>
                              <Button type="button" onClick={() => setActiveTab("review")}>Review</Button>
                         </div>
                     </TabsContent>
@@ -200,6 +257,12 @@ export function CreateDataPackWizard({ onFinished }: CreateDataPackWizardProps) 
                                 <CardDescription>Please review the details below before creating the DataPack.</CardDescription>
                             </CardHeader>
                              <CardContent className="space-y-4">
+                                {imagePreview && (
+                                    <div>
+                                        <h4 className="font-semibold">Cover Image:</h4>
+                                        <Image src={imagePreview} alt="Cover preview" width={128} height={128} className="rounded-md object-cover mt-2 border" />
+                                    </div>
+                                )}
                                 <div>
                                     <h4 className="font-semibold">Name:</h4>
                                     <p className="text-muted-foreground">{watchedValues.name || "Not set"}</p>

@@ -29,6 +29,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { CreateDataPackWizard } from "@/components/create-datapack-wizard";
+import Image from "next/image";
 
 export default function AdminDataPacksPage() {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -80,6 +81,7 @@ export default function AdminDataPacksPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>Cover</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Description</TableHead>
                                         <TableHead>Status</TableHead>
@@ -89,6 +91,11 @@ export default function AdminDataPacksPage() {
                                 <TableBody>
                                     {packs?.map(pack => (
                                         <TableRow key={pack.id}>
+                                            <TableCell>
+                                                {pack.coverImageUrl && (
+                                                    <Image src={pack.coverImageUrl} alt={pack.name} width={40} height={40} className="rounded-sm object-cover" />
+                                                )}
+                                            </TableCell>
                                             <TableCell className="font-medium">{pack.name}</TableCell>
                                             <TableCell className="text-muted-foreground">{pack.description}</TableCell>
                                             <TableCell>
@@ -109,13 +116,20 @@ export default function AdminDataPacksPage() {
                             {packs.map(pack => (
                                 <Card key={pack.id}>
                                     <CardHeader>
-                                        <div className="flex justify-between items-start">
-                                            <CardTitle>{pack.name}</CardTitle>
-                                             <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
-                                                {pack.premiumStatus}
-                                            </Badge>
+                                        <div className="flex items-start gap-4">
+                                             {pack.coverImageUrl && (
+                                                <Image src={pack.coverImageUrl} alt={pack.name} width={64} height={64} className="rounded-md object-cover" />
+                                            )}
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <CardTitle>{pack.name}</CardTitle>
+                                                    <Badge variant={pack.premiumStatus === 'free' ? 'secondary' : 'default'}>
+                                                        {pack.premiumStatus}
+                                                    </Badge>
+                                                </div>
+                                                <CardDescription>{pack.description}</CardDescription>
+                                            </div>
                                         </div>
-                                        <CardDescription>{pack.description}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-xs text-muted-foreground">
