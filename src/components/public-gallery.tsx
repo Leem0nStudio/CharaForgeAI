@@ -1,8 +1,8 @@
+
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
-import Image from "next/image";
-import { Heart, Plus } from "lucide-react";
+import { Heart } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,9 +12,9 @@ import {
   CardContent,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { AddToCollection } from "./add-to-collection";
+import { CharacterCard } from "./character-card";
 
 export function PublicGallery() {
   const { user } = useAuth();
@@ -109,29 +109,12 @@ export function PublicGallery() {
         const isLiked = user ? character.likedBy.includes(user.uid) : false;
 
         return (
-          <Card key={character.id} className="flex flex-col overflow-hidden group transition-all duration-300 bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-primary/50 hover:shadow-primary/20 hover:shadow-lg">
-            <div className="relative">
-              <Image
-                src={character.imageUrl}
-                alt={`Image of ${character.name}`}
-                width={512}
-                height={512}
-                className="w-full h-auto aspect-square object-cover"
-              />
-              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                 {user && <AddToCollection characterId={character.id} />}
-              </div>
-            </div>
-            <CardHeader>
-              <CardTitle className="font-headline truncate">{character.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-grow">
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {character.bio}
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Button
+          <CharacterCard
+            key={character.id}
+            character={character}
+            overlay={user && <AddToCollection characterId={character.id} />}
+          >
+             <Button
                 variant="outline"
                 className="w-full"
                 onClick={() => handleLikeToggle(character.id, isLiked)}
@@ -140,8 +123,7 @@ export function PublicGallery() {
                 <Heart className={`mr-2 h-4 w-4 transition-colors ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                 {character.likes} {character.likes === 1 ? "Like" : "Likes"}
               </Button>
-            </CardFooter>
-          </Card>
+          </CharacterCard>
         );
       })}
     </div>
