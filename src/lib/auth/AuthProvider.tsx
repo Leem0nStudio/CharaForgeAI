@@ -38,17 +38,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (userState) => {
       setLoading(true);
       if (userState) {
-        setUser(userState);
         const idTokenResult = await userState.getIdTokenResult();
+        setUser(userState);
         setIsAdmin(!!idTokenResult.claims.admin);
       } else {
         setUser(null);
         setIsAdmin(false);
       }
-      
-      // Invalidate the entire tRPC cache on auth state change.
-      // This is the key to ensuring all components get fresh data after login/logout.
-      await queryClient.invalidateQueries();
       setLoading(false);
     });
 
@@ -57,21 +53,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    setLoading(true);
     try {
       await signInWithPopup(auth, provider);
+      // After sign-in, onAuthStateChanged will trigger and handle the user state.
+      // We can invalidate queries here to ensure data is fresh.
+      await queryClient.invalidateQueries();
     } catch (error: any) {
-      if (error.code === "auth/popup-closed-by-user") {
-        return;
+      if (error.code !== "auth/popup-closed-by-user") {
+        console.error("Error signing in with Google: ", error);
       }
-      console.error("Error signing in with Google: ", error);
+    } finally {
+      // setLoading will be updated by onAuthStateChanged
     }
   };
 
   const signOut = async () => {
+    setLoading(true);
     try {
       await auth.signOut();
+      // After sign-out, onAuthStateChanged will trigger, setting user to null.
+      await queryClient.invalidateQueries();
     } catch (error) {
       console.error("Error signing out: ", error);
+      setLoading(false);
     }
   };
 
