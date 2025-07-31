@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TrpcProvider } from "@/lib/trpc/Provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { Header } from "@/components/header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,7 +32,8 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-                {children}
+              <Header />
+              <main>{children}</main>
               <Toaster />
             </ThemeProvider>
           </AuthProvider>
