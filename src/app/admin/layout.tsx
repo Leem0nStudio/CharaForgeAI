@@ -41,21 +41,26 @@ export default function AdminLayout({
           <Sidebar>
             <AdminNav />
           </Sidebar>
-          <main className="flex-1 p-4 md:p-8">
-            <div className="flex items-center mb-4 md:hidden">
+          <div className="flex-1 flex flex-col">
+            <header className="flex items-center p-4 border-b md:hidden">
                <SidebarTrigger />
                <span className="font-semibold ml-2">Admin Menu</span>
-            </div>
-            {children}
-          </main>
+            </header>
+            <main className="flex-1 p-4 md:p-8">
+              {children}
+            </main>
+          </div>
         </div>
       </SidebarProvider>
     )
   };
 
   return (
-    <div className="bg-background text-foreground">
-      {renderContent()}
+    <div className="bg-background text-foreground flex flex-col min-h-screen">
+      <Header />
+      <div className="flex-1">
+        {renderContent()}
+      </div>
     </div>
   );
 }
