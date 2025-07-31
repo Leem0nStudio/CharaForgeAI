@@ -4,16 +4,22 @@ import { db, auth } from '@/lib/firebase/server';
 export const adminRouter = router({
     getStats: adminProcedure.query(async () => {
         const usersPromise = auth.listUsers();
-        const charactersCountPromise = db.collection('characters').count().get();
+        const charactersPromise = db.collection('characters').get();
+        const datapacksCountPromise = db.collection('datapacks').count().get();
 
-        const [listUsersResult, charactersSnapshot] = await Promise.all([
+
+        const [listUsersResult, charactersSnapshot, datapacksSnapshot] = await Promise.all([
             usersPromise,
-            charactersCountPromise,
+            charactersPromise,
+            datapacksCountPromise,
         ]);
 
         const totalUsers = listUsersResult.users.length;
-        const totalCharacters = charactersSnapshot.data().count;
+        const totalCharacters = charactersSnapshot.size;
+        const totalLikes = charactersSnapshot.docs.reduce((acc, doc) => acc + (doc.data().likes || 0), 0);
+        const totalDataPacks = datapacksSnapshot.data().count;
 
-        return { totalUsers, totalCharacters };
+
+        return { totalUsers, totalCharacters, totalLikes, totalDataPacks };
     }),
 });

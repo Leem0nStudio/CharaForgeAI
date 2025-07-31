@@ -70,7 +70,7 @@ export const dataPackRouter = router({
         
         await packRef.set({
             ...packData,
-            content: [],
+            content: [], // content is deprecated but kept for schema compatibility
             promptTemplate: promptTemplateUrl,
             createdAt: FieldValue.serverTimestamp(),
         });
