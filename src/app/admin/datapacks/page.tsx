@@ -2,8 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import { Header } from "@/components/header";
-import { useAuth } from "@/lib/auth/AuthProvider";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +14,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Loader2, Package } from "lucide-react";
-import Link from "next/link";
 import {
     Dialog,
     DialogContent,
@@ -27,12 +24,9 @@ import {
 import { CreateDataPackWizard } from "@/components/create-datapack-wizard";
 
 export default function AdminDataPacksPage() {
-    const { user, loading: authLoading, isAdmin } = useAuth();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     
-    const { data: packs, isLoading: packsLoading, error } = trpc.datapack.listAll.useQuery(undefined, {
-        enabled: !!user && isAdmin,
-    });
+    const { data: packs, isLoading: packsLoading, error } = trpc.datapack.listAll.useQuery();
     
     const utils = trpc.useUtils();
 
@@ -42,21 +36,10 @@ export default function AdminDataPacksPage() {
     }
 
     const renderContent = () => {
-        if (authLoading || (isAdmin && packsLoading)) {
+        if (packsLoading) {
             return (
                 <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-            );
-        }
-
-        if (!user || !isAdmin) {
-             return (
-                <div className="text-center py-16">
-                    <h2 className="text-2xl font-bold">Access Denied</h2>
-                    <p className="text-muted-foreground mt-2">
-                        You must be an administrator to view this page.
-                    </p>
                 </div>
             );
         }
@@ -126,15 +109,12 @@ export default function AdminDataPacksPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <Header />
-            <main className="p-4 md:p-8">
-                 <div className="mb-8 text-center">
-                    <h2 className="text-3xl font-bold font-headline">Manage DataPacks</h2>
-                    <p className="text-muted-foreground">Create, view, and manage character DataPacks.</p>
-                </div>
-                {renderContent()}
-            </main>
-        </div>
+        <>
+            <div className="mb-8 text-center">
+                <h2 className="text-3xl font-bold font-headline">Manage DataPacks</h2>
+                <p className="text-muted-foreground">Create, view, and manage character DataPacks.</p>
+            </div>
+            {renderContent()}
+        </>
     );
 }
