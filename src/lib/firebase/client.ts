@@ -15,7 +15,7 @@ const firebaseConfig = {
 // Validate that the config has been populated
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
     throw new Error(
-      "Firebase config is not set. Make sure you have a .env.local file with the required NEXT_PUBLIC_FIREBASE_* variables."
+      "Firebase client config is not set. Make sure you have a .env.local file with the required NEXT_PUBLIC_FIREBASE_* variables."
     );
 }
 
@@ -38,4 +38,5 @@ if (typeof window !== 'undefined' && !getApps().length) {
 }
 
 // These exports can be undefined on the server-side, so they should be used in client components.
+// @ts-ignore
 export { app, auth, db, storage };
