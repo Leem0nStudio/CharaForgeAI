@@ -12,6 +12,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Validate that the config has been populated
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    throw new Error(
+      "Firebase config is not set. Make sure you have a .env.local file with the required NEXT_PUBLIC_FIREBASE_* variables."
+    );
+}
+
+
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
