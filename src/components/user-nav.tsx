@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, ShieldCheck, Search, UserCog, Library, SquarePen } from "lucide-react";
+import { LogOut, ShieldCheck, Search, UserCog, Library, SquarePen, User } from "lucide-react";
 
 
 export function UserNav() {
@@ -40,6 +40,12 @@ export function UserNav() {
                 </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+             <DropdownMenuItem asChild>
+                <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                </Link>
+            </DropdownMenuItem>
              <DropdownMenuItem asChild>
                 <Link href="/create">
                     <SquarePen className="mr-2 h-4 w-4" />

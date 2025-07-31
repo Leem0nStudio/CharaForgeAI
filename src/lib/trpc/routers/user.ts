@@ -14,7 +14,9 @@ const UserSchema = z.object({
   photoURL: z.string().url().nullable(),
 });
 
-const UserUpdateSchema = UserSchema.partial();
+const UserUpdateSchema = z.object({
+    displayName: z.string().min(2, "Display name must be at least 2 characters."),
+});
 
 export const userRouter = router({
   getUser: privateProcedure.query(async ({ ctx }) => {
@@ -42,7 +44,18 @@ export const userRouter = router({
     .input(UserUpdateSchema)
     .mutation(async ({ ctx, input }) => {
       const userRef = db.collection('users').doc(ctx.user!.uid);
-      await userRef.set({ ...input, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+
+      // Update Firebase Auth
+      await auth.updateUser(ctx.user!.uid, {
+        displayName: input.displayName,
+      });
+
+      // Update Firestore
+      await userRef.update({ 
+          displayName: input.displayName,
+          updatedAt: FieldValue.serverTimestamp(),
+      });
+      
       return { success: true };
     }),
   deleteUser: privateProcedure.mutation(async ({ ctx }) => {
