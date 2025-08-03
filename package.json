@@ -9,7 +9,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "firebase:setup": "node scripts/firebase-setup.js",
+    "firebase:emulators": "firebase emulators:start",
+    "admin:grant": "node assignAdminRole.js grant",
+    "admin:revoke": "node assignAdminRole.js revoke",
+    "admin:check": "node assignAdminRole.js check",
+    "admin:list": "node assignAdminRole.js list"
   },
   "dependencies": {
     "@genkit-ai/google-cloud": "^1.15.5",
