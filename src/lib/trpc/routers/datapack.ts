@@ -171,7 +171,7 @@ export const dataPackRouter = router({
       }
       const packsSnapshot = await db
         .collection('datapacks')
-        .where(FieldValue.documentId(), 'in', input.ids)
+        .where('__name__', 'in', input.ids)
         .get();
       
       const packs = packsSnapshot.docs.map(doc => DataPackSchema.parse({ id: doc.id, ...doc.data() }));

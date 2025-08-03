@@ -35,11 +35,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
+    // Check if Firebase is properly initialized
+    if (!auth || !db) {
+      console.error("Firebase is not properly initialized");
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (userState) => {
       if (userState) {
-        const idTokenResult = await userState.getIdTokenResult();
-        setUser(userState);
-        setIsAdmin(!!idTokenResult.claims.admin);
+        try {
+          const idTokenResult = await userState.getIdTokenResult();
+          setUser(userState);
+          setIsAdmin(!!idTokenResult.claims.admin);
+        } catch (error) {
+          console.error("Error getting user token:", error);
+          setUser(userState);
+          setIsAdmin(false);
+        }
       } else {
         setUser(null);
         setIsAdmin(false);
@@ -51,6 +70,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signInWithGoogle = async () => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Check if Firebase is properly initialized
+    if (!auth) {
+      console.error("Firebase Auth is not properly initialized");
+      return;
+    }
+
     const provider = new GoogleAuthProvider();
     setLoading(true);
     try {
@@ -68,6 +98,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Check if Firebase is properly initialized
+    if (!auth) {
+      console.error("Firebase Auth is not properly initialized");
+      return;
+    }
+
     try {
       await auth.signOut();
       // onAuthStateChanged will handle setting user to null.

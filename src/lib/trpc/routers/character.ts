@@ -63,7 +63,7 @@ export const characterRouter = router({
         const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(limit).get();
         const characters = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(char => char.imageUrl); // Ensure imageUrl exists
+          .filter(char => 'imageUrl' in char && char.imageUrl && char.imageUrl.trim() !== ''); // Ensure imageUrl exists and is not empty
         return characters.map(char => CharacterSchema.parse(char));
     }),
   
@@ -74,7 +74,7 @@ export const characterRouter = router({
         const snapshot = await db.collection('characters').where('publicStatus', '==', true).orderBy('likes', 'desc').limit(limit).get();
         const characters = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(char => char.imageUrl); // Ensure imageUrl exists
+          .filter(char => 'imageUrl' in char && char.imageUrl && char.imageUrl.trim() !== ''); // Ensure imageUrl exists and is not empty
         return characters.map(char => CharacterSchema.parse(char));
     }),
 
@@ -137,7 +137,7 @@ export const characterRouter = router({
           likedBy: FieldValue.arrayUnion(ctx.user!.uid),
         });
 
-        if (charData.userId) {
+        if (charData?.userId) {
             const userRef = db.collection('users').doc(charData.userId);
             transaction.update(userRef, {
                 totalLikes: FieldValue.increment(1)
@@ -169,7 +169,7 @@ export const characterRouter = router({
           likedBy: FieldValue.arrayRemove(ctx.user!.uid),
         });
 
-        if (charData.userId) {
+        if (charData?.userId) {
             const userRef = db.collection('users').doc(charData.userId);
              transaction.update(userRef, {
                 totalLikes: FieldValue.increment(-1)

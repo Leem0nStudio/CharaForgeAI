@@ -70,7 +70,7 @@ export const collectionRouter = router({
                 return { ...collectionData, characters: [] };
             }
 
-            const characterDocs = await db.collection('characters').where(FieldValue.documentId(), 'in', collectionData.characterIds).get();
+            const characterDocs = await db.collection('characters').where('__name__', 'in', collectionData.characterIds).get();
             const characters = characterDocs.docs.map(doc => CharacterSchema.parse({ id: doc.id, ...doc.data() }));
 
             return { ...collectionData, characters };

@@ -11,7 +11,8 @@ import { createContext } from "@/lib/trpc/trpc";
 import { headers } from "next/headers";
 
 export default async function Home() {
-  const trpc = appRouter.createCaller(await createContext({ headers: headers() }));
+  const headersList = await headers();
+  const trpc = appRouter.createCaller(await createContext({ headers: headersList }));
   
   const [topCharacters, topCreators] = await Promise.all([
     trpc.character.getTopCharacters({ limit: 4 }),
