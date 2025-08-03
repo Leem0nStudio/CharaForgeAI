@@ -3,32 +3,144 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: Can only read/write their own data.
+    // Helper functions for validation
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    function isValidUserData() {
+      return request.resource.data.keys().hasAll(['uid', 'email', 'displayName', 'photoURL', 'purchasedPacks', 'installedPacks', 'subscriptionTier', 'totalLikes', 'isActive', 'preferences']) &&
+             request.resource.data.uid is string &&
+             request.resource.data.email is string &&
+             request.resource.data.purchasedPacks is list &&
+             request.resource.data.installedPacks is list &&
+             request.resource.data.subscriptionTier in ['free', 'premium', 'enterprise'] &&
+             request.resource.data.totalLikes is number &&
+             request.resource.data.isActive is bool &&
+             request.resource.data.preferences is map;
+    }
+
+    function isValidUserUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'preferences', 'installedPacks', 'purchasedPacks', 'updatedAt', 'totalLikes', 'isActive', 'deletedAt']);
+    }
+
+    // Users: Enhanced validation and security
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow read for own data or admin
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Allow create only for own user with valid data
+      allow create: if isOwner(userId) && 
+                   isValidUserData() &&
+                   request.resource.data.uid == userId &&
+                   request.resource.data.totalLikes == 0 &&
+                   request.resource.data.isActive == true &&
+                   'core_base_styles' in request.resource.data.installedPacks;
+      
+      // Allow update only for own user with valid updates
+      allow update: if isOwner(userId) && isValidUserUpdate();
+      
+      // Allow delete only for admin or own user (soft delete)
+      allow delete: if isAdmin() || (isOwner(userId) && request.resource.data.isActive == false);
     }
 
-    // Characters:
-    // - Anyone can read public characters.
-    // - Only the owner can read their private characters.
-    // - Only the owner can create, update, or delete their characters.
+    // Characters: Enhanced with privacy and validation
     match /characters/{characterId} {
-      allow read: if resource.data.publicStatus == true || (request.auth != null && request.auth.uid == resource.data.userId);
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      function isValidCharacterData() {
+        return request.resource.data.keys().hasAll(['userId', 'name', 'publicStatus']) &&
+               request.resource.data.userId is string &&
+               request.resource.data.name is string &&
+               request.resource.data.publicStatus is bool;
+      }
+
+      function isValidCharacterUpdate() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'createdAt']);
+      }
+
+      // Read: Public characters or own private characters or admin
+      allow read: if resource.data.publicStatus == true || 
+                     isOwner(resource.data.userId) || 
+                     isAdmin();
+      
+      // Create: Only authenticated users can create with valid data
+      allow create: if isAuthenticated() && 
+                   isValidCharacterData() &&
+                   request.resource.data.userId == request.auth.uid;
+      
+      // Update: Only owner can update (cannot change userId or createdAt)
+      allow update: if isOwner(resource.data.userId) && isValidCharacterUpdate();
+      
+      // Delete: Only owner or admin
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
 
-    // Collections:
-    // - Only the owner can manage their collections.
+    // Collections: Enhanced with validation
     match /collections/{collectionId} {
-      allow read, create, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      function isValidCollectionData() {
+        return request.resource.data.keys().hasAll(['userId', 'name']) &&
+               request.resource.data.userId is string &&
+               request.resource.data.name is string;
+      }
+
+      function isValidCollectionUpdate() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'createdAt']);
+      }
+
+      // Only the owner can manage their collections or admin can read
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      allow create: if isAuthenticated() && 
+                   isValidCollectionData() &&
+                   request.resource.data.userId == request.auth.uid;
+      
+      allow update: if isOwner(resource.data.userId) && isValidCollectionUpdate();
+      
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
 
-    // DataPacks:
-    // - Read-only for all clients, as they are managed by the admin/server.
+    // DataPacks: Read-only for clients, admin-only write
     match /datapacks/{datapackId} {
-      allow read: if true;
-      allow write: if false;
+      function isValidDataPackData() {
+        return request.resource.data.keys().hasAll(['id', 'name', 'version', 'active']) &&
+               request.resource.data.id is string &&
+               request.resource.data.name is string &&
+               request.resource.data.version is string &&
+               request.resource.data.active is bool;
+      }
+
+      // Anyone can read active datapacks
+      allow read: if resource.data.active == true || isAdmin();
+      
+      // Only admin can write
+      allow write: if isAdmin() && isValidDataPackData();
+    }
+
+    // Admin-only collections for system management
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // System logs and analytics (admin only)
+    match /logs/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Development environment rules (remove in production)
+    match /dev/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Temporary test data (remove in production)
+    match /test/{document=**} {
+      allow read, write: if isAuthenticated();
     }
   }
 }
