@@ -1,22 +1,17 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { trpc } from "@/lib/trpc/client";
 import { useToast } from "@/hooks/use-toast";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@/lib/trpc/server";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -25,11 +20,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useState, useEffect } from "react";
-import { Loader2, UploadCloud } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import Image from "next/image";
-import type { inferRouterOutputs } from '@trpc/server';
-import type { AppRouter } from "@/lib/trpc/server";
+import { UploadCloud } from "lucide-react";
 
 type DataPack = inferRouterOutputs<AppRouter["datapack"]["listAll"]>[number];
 
@@ -51,13 +54,10 @@ export function EditDataPackForm({ datapack, onFinished }: EditDataPackFormProps
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(datapack.coverImageUrl ?? null);
 
-    const { data: templateData, isLoading: isLoadingTemplate } = trpc.datapack.getTemplateContent.useQuery(
+    const { data: templateData } = trpc.datapack.getTemplateContent.useQuery(
         { packId: datapack.id },
         {
             refetchOnWindowFocus: false, // Prevents re-fetching which would overwrite user edits
-            onSuccess: (data) => {
-                form.setValue("promptTemplateContent", data.content);
-            }
         }
     );
 
@@ -71,6 +71,13 @@ export function EditDataPackForm({ datapack, onFinished }: EditDataPackFormProps
             coverImage: datapack.coverImageUrl, // Start with existing URL
         },
     });
+
+    // Set the template content when data is available
+    useEffect(() => {
+        if (templateData?.content) {
+            form.setValue("promptTemplateContent", templateData.content);
+        }
+    }, [templateData, form]);
     
     const updatePackMutation = trpc.datapack.update.useMutation({
         onSuccess: () => {
@@ -196,7 +203,6 @@ export function EditDataPackForm({ datapack, onFinished }: EditDataPackFormProps
                                     className="min-h-[300px] font-mono text-xs"
                                     placeholder="Paste your prompt_template.yaml content here..."
                                     {...field}
-                                    disabled={isLoadingTemplate}
                                 />
                             </FormControl>
                             <FormMessage />
@@ -205,8 +211,8 @@ export function EditDataPackForm({ datapack, onFinished }: EditDataPackFormProps
                 />
 
                 <div className="flex justify-end pt-4">
-                    <Button type="submit" disabled={isSubmitting || isLoadingTemplate}>
-                        {(isSubmitting || isLoadingTemplate) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button type="submit" disabled={isSubmitting}>
+                        {(isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isSubmitting ? "Saving..." : "Save Changes"}
                     </Button>
                 </div>

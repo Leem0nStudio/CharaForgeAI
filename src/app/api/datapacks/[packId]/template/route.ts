@@ -13,7 +13,8 @@ export async function GET(
   { params }: { params: { packId: string } }
 ) {
   const { packId } = params;
-  const session = cookies().get("__session")?.value || "";
+  const cookieStore = await cookies();
+  const session = cookieStore.get("__session")?.value || "";
 
   if (!session) {
     return new NextResponse("Unauthorized: No session cookie found.", { status: 401 });

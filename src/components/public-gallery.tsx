@@ -22,7 +22,7 @@ export function PublicGallery() {
   const utils = trpc.useUtils();
 
   const { data: characters, isLoading, error } =
-    trpc.character.listPublicCharacters.useQuery();
+    trpc.character.listPublicCharacters.useQuery({ limit: 50 });
 
   const likeMutation = trpc.character.likeCharacter.useMutation({
     onSuccess: () => {

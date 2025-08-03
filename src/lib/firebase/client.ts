@@ -19,24 +19,29 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
     );
 }
 
-
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
 
-if (typeof window !== 'undefined' && !getApps().length) {
-  app = initializeApp(firebaseConfig);
+// Only initialize Firebase on the client side
+if (typeof window !== 'undefined') {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
+  }
+  
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
-} else if (getApps().length > 0) {
-  app = getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
+} else {
+  // Server-side: create dummy objects to prevent undefined errors
+  // These will be properly initialized when used on the client
+  auth = {} as Auth;
+  db = {} as Firestore;
+  storage = {} as FirebaseStorage;
+  app = {} as FirebaseApp;
 }
 
-// These exports can be undefined on the server-side, so they should be used in client components.
-// @ts-ignore
 export { app, auth, db, storage };

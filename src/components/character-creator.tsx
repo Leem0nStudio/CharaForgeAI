@@ -156,6 +156,7 @@ export function CharacterCreator() {
         datapackId: selectedPack.id,
         name: nameAndBioResult.name,
         bio: nameAndBioResult.bio,
+        useHighQuality: false, // Default to standard quality
       });
 
       if (!imageResult?.imageUrl) {
